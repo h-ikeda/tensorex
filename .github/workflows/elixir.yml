@@ -28,6 +28,6 @@ jobs:
     - name: Install dependencies
       run: mix deps.get
     - name: Run tests
-      run: mix test --cover --formatter JUnitFormatter
+      run: mix test --cover
     - name: Report coverage
       run: bash <(curl -s https://codecov.io/bash)
