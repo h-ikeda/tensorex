@@ -540,30 +540,46 @@ defmodule Tensorex do
       iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
       ...>                                             [ 4,  5,  6],
       ...>                                             [ 7,  8,  9],
-      ...>                                             [10, 11, 12]]), 2..3)
+      ...>                                             [10, 11, 12]]), [2..3])
       %#{__MODULE__}{data: %{1 => %{1 => 4, 2 => 5, 3 => 6},
                              2 => %{1 => 7, 2 => 8, 3 => 9}}, shape: [2, 3]}
       iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
       ...>                                             [ 4,  5,  6],
       ...>                                             [ 7,  8,  9],
-      ...>                                             [10, 11, 12]]), -2..-1)
+      ...>                                             [10, 11, 12]]), [-2..-1])
       %#{__MODULE__}{data: %{1 => %{1 =>  7, 2 =>  8, 3 =>  9},
                              2 => %{1 => 10, 2 => 11, 3 => 12}}, shape: [2, 3]}
+      iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
+      ...>                                             [ 4,  5,  6],
+      ...>                                             [ 7,  8,  9],
+      ...>                                             [10, 11, 12]]), [2..3, 2..-1])
+      %#{__MODULE__}{data: %{1 => %{1 => 5, 2 => 6},
+                             2 => %{1 => 8, 2 => 9}}, shape: [2, 2]}
   """
-  @spec slice(t, Range.t() | [Range.t]) :: t
-  def slice(%__MODULE__{} = t, [r | s]), do: slice(t, s)
-  def slice(%__MODULE__{shape: [s | _]} = t, m..n) when m < 0, do: slice(t, (s + m + 1)..n)
-  def slice(%__MODULE__{shape: [s | _]} = t, m..n) when n < 0, do: slice(t, m..(s + n + 1))
-
-  def slice(%__MODULE__{data: d, shape: [n | s]}, m.._ = r) do
-    v = Stream.filter(d, &(elem(&1, 0) in r)) |> Enum.into(%{}, fn {i, u} -> {i - m + 1, u} end)
-    %__MODULE__{data: v, shape: [Enum.count(r) | s]}
+  @spec slice(t, [Range.t()]) :: t
+  def slice(%__MODULE__{data: d, shape: s}, r) do
+    {s1, s2} = Enum.map_reduce(r, s, fn a, [b | c] -> {Enum.count(normalize_range(a, b)), c} end)
+    %__MODULE__{data: pick(d, s, r), shape: s1 ++ s2}
   end
+
+  @spec pick(data, [pos_integer], [Range.t()]) :: data
+  defp pick(d, _, []), do: d
+
+  defp pick(%{} = d, [w | s], [a | c]) do
+    m.._ = r = normalize_range(a, w)
+
+    Stream.filter(d, &(elem(&1, 0) in r))
+    |> Enum.into(%{}, fn {i, u} -> {i - m + 1, pick(u, s, c)} end)
+  end
+
+  @spec normalize_range(Range.t(), pos_integer) :: Range.t()
+  defp normalize_range(a..b, s) when a < 0, do: normalize_range((s + a + 1)..b, s)
+  defp normalize_range(a..b, s) when b < 0, do: a..(s + b + 1)
+  defp normalize_range(r, _), do: r
 
   @doc """
   Tridiagonalize a symmetric 2-rank tensor.
   """
   def tridiagonalize(%__MODULE__{data: d, shape: [n, n]}) do
-
   end
 end
