@@ -40,3 +40,29 @@ jobs:
     - name: Report coverage
       if: ${{ success() && matrix.elixir-version == '1.11.x' }}
       run: bash <(curl -s https://codecov.io/bash)
+
+  doc:
+
+    name: Generate documentation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Elixir
+      uses: actions/setup-elixir@v1
+      with:
+        elixir-version: 1.11.x
+        otp-version: 23.x
+    - name: Restore dependencies cache
+      uses: actions/cache@v2
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    - name: Install dependencies
+      run: mix deps.get
+    - name: Generate documentation
+      run: mix docs
+    - uses: actions/upload-artifact@v2
+      with:
+        name: docs
+        path: doc

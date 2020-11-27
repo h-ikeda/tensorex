@@ -1,6 +1,6 @@
 defmodule Tensorex do
   @moduledoc """
-  `Tensorex` is a library to oparate with tensors.
+  The module to oparate with tensors.
   """
   @typep data :: %{pos_integer => data | number}
   @opaque t :: %__MODULE__{data: data | nil, shape: [pos_integer]}
