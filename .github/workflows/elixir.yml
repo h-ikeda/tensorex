@@ -15,14 +15,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - elixir-version: 1.6.x
-            otp-version: 20.x
-          - elixir-version: 1.7.x
-            otp-version: 22.x
-          - elixir-version: 1.8.x
-            otp-version: 22.x
-          - elixir-version: 1.9.x
-            otp-version: 22.x
           - elixir-version: 1.10.x
             otp-version: 23.x
           - elixir-version: 1.11.x
@@ -46,4 +38,5 @@ jobs:
     - name: Run tests
       run: mix test --cover
     - name: Report coverage
+      if: ${{ success() && matrix.elixir-version == '1.11.x' }}
       run: bash <(curl -s https://codecov.io/bash)
