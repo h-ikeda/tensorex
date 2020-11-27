@@ -429,6 +429,7 @@ defmodule Tensorex do
   end
 
   defp replace(d1, d2, :prod), do: d1 * d2
+  defp replace(d1, d2, :div), do: d1 / d2
   @spec combination(data, data, non_neg_integer) :: data | number | nil
   defp combination(d1, d2, 0), do: replace(d1, d2, :prod)
 
@@ -476,5 +477,60 @@ defmodule Tensorex do
   defp composite_by_axis(d) do
     Enum.group_by(d, fn {[i | _], _} -> i end, fn {[_ | i], v} -> {i, v} end)
     |> Enum.into(%{}, fn {i, v} -> {i, composite_by_axis(v)} end)
+  end
+
+  @doc """
+  Divides all element of the tensor by the scalar.
+
+      iex> #{__MODULE__}.divide(
+      ...>   #{__MODULE__}.from_list([[2  , 3.5, -1.6,   8.2],
+      ...>                            [1.1, 3.0,  0  , -12.1]]), 4)
+      %#{__MODULE__}{data: %{1 => %{1 => 0.5  , 2 => 0.875, 3 => -0.4, 4 => 2.05  },
+                             2 => %{1 => 0.275, 2 => 0.75 ,            4 => -3.025}}, shape: [2, 4]}
+  """
+  @spec divide(t, number) :: t
+  def divide(%__MODULE__{data: nil} = t, s) when is_number(s) and s != 0, do: t
+
+  def divide(%__MODULE__{data: d} = t, s) when is_number(s) and s != 0 do
+    %{t | data: replace(d, s, :div)}
+  end
+
+  @doc """
+  Returns a `n` × `n` tensor representing the kronecker delta.
+
+      iex> #{__MODULE__}.kronecker_delta(3)
+      %#{__MODULE__}{data: %{1 => %{1 => 1              },
+                             2 => %{       2 => 1       },
+                             3 => %{              3 => 1}}, shape: [3, 3]}
+  """
+  @spec kronecker_delta(pos_integer) :: t
+  def kronecker_delta(n) when is_integer(n) and n > 0 do
+    %__MODULE__{data: Enum.into(1..n, %{}, &{&1, %{&1 => 1}}), shape: [n, n]}
+  end
+
+  @doc """
+  Performs the householder conversion.
+
+  Returns a tuple of the converted vecter and the convertion tensor.
+  Applying the conversion tensor to the given vector results to the converted vector.
+
+      iex> #{__MODULE__}.householder(#{__MODULE__}.from_list([2  , 3.5, -1.6,   8.2]))
+      {%#{__MODULE__}{data: %{1 => 9.276313923105448}, shape: [4]},
+       %#{__MODULE__}{data: %{1 => %{1 => 0.21560288025811614, 2 => 0.3773050404517034  , 3 => -0.172482304206493, 4 => 0.8839718090582764},
+                              2 => %{1 => 0.3773050404517034 , 2 => 0.8185114529779167  , 3 => 0.0829661929243809, 4 => -0.42520173873745204},
+                              3 => %{1 => -0.172482304206493 , 2 => 0.0829661929243809  , 3 => 0.9620725975202831, 4 => 0.1943779377085495},
+                              4 => %{1 => 0.8839718090582764 , 2 => -0.42520173873745204, 3 => 0.1943779377085495, 4 => 0.003813069243683853}}, shape: [4, 4]}}
+  """
+  @spec householder(t) :: {t, t}
+  def householder(%__MODULE__{data: %{1 => x}, shape: [s]} = t) do
+    dot = multiply(t, t, [{0, 0}])
+    norm = if x < 0, do: :math.sqrt(dot), else: :math.sqrt(dot)
+    v = divide(put_in(t[1], x - norm), dot * :math.sqrt(2 * abs(x - norm)))
+
+    p =
+      kronecker_delta(s)
+      |> subtract(multiply(v, v) |> divide(multiply(v, v, [{0, 0}])) |> multiply(2))
+
+    {%{t | data: %{1 => norm}}, p}
   end
 end
