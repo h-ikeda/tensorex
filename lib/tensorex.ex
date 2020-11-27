@@ -416,7 +416,7 @@ defmodule Tensorex do
 
   @spec contract_shape({[pos_integer], [non_neg_integer]}) :: Enum.t()
   defp contract_shape({s, a}) do
-    Stream.with_index(s) |> Stream.filter(&(elem(&1, 1) not in a)) |> Stream.map(&elem(&1, 0))
+    Stream.with_index(s) |> Stream.reject(&(elem(&1, 1) in a)) |> Stream.map(&elem(&1, 0))
   end
 
   @spec replace(data | number, data | number, any) :: data
@@ -532,5 +532,38 @@ defmodule Tensorex do
       |> subtract(multiply(v, v) |> divide(multiply(v, v, [{0, 0}])) |> multiply(2))
 
     {%{t | data: %{1 => norm}}, p}
+  end
+
+  @doc """
+  Returns a tensor consisting partial elements of the given tensor.
+
+      iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
+      ...>                                             [ 4,  5,  6],
+      ...>                                             [ 7,  8,  9],
+      ...>                                             [10, 11, 12]]), 2..3)
+      %#{__MODULE__}{data: %{1 => %{1 => 4, 2 => 5, 3 => 6},
+                             2 => %{1 => 7, 2 => 8, 3 => 9}}, shape: [2, 3]}
+      iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
+      ...>                                             [ 4,  5,  6],
+      ...>                                             [ 7,  8,  9],
+      ...>                                             [10, 11, 12]]), -2..-1)
+      %#{__MODULE__}{data: %{1 => %{1 =>  7, 2 =>  8, 3 =>  9},
+                             2 => %{1 => 10, 2 => 11, 3 => 12}}, shape: [2, 3]}
+  """
+  @spec slice(t, Range.t() | [Range.t]) :: t
+  def slice(%__MODULE__{} = t, [r | s]), do: slice(t, s)
+  def slice(%__MODULE__{shape: [s | _]} = t, m..n) when m < 0, do: slice(t, (s + m + 1)..n)
+  def slice(%__MODULE__{shape: [s | _]} = t, m..n) when n < 0, do: slice(t, m..(s + n + 1))
+
+  def slice(%__MODULE__{data: d, shape: [n | s]}, m.._ = r) do
+    v = Stream.filter(d, &(elem(&1, 0) in r)) |> Enum.into(%{}, fn {i, u} -> {i - m + 1, u} end)
+    %__MODULE__{data: v, shape: [Enum.count(r) | s]}
+  end
+
+  @doc """
+  Tridiagonalize a symmetric 2-rank tensor.
+  """
+  def tridiagonalize(%__MODULE__{data: d, shape: [n, n]}) do
+
   end
 end
