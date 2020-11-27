@@ -41,9 +41,9 @@ jobs:
       if: ${{ success() && matrix.elixir-version == '1.11.x' }}
       run: bash <(curl -s https://codecov.io/bash)
 
-  doc:
+  format_doc:
 
-    name: Generate documentation
+    name: Format and documentation
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -60,6 +60,8 @@ jobs:
         restore-keys: ${{ runner.os }}-mix-
     - name: Install dependencies
       run: mix deps.get
+    - name: Check formatted
+      run: mix format --check-formatted
     - name: Generate documentation
       run: mix docs
     - uses: actions/upload-artifact@v2
