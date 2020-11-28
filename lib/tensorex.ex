@@ -618,7 +618,7 @@ defmodule Tensorex do
   end
 
   @spec erase(data | number, [pos_integer], [pos_integer]) :: data | nil
-  defp erase(d, [], []), do: nil
+  defp erase(_, [], []), do: nil
 
   defp erase(%{} = d, [s | m], []) do
     Stream.flat_map(d, fn
@@ -639,8 +639,43 @@ defmodule Tensorex do
   end
 
   @doc """
-  Tridiagonalize a symmetric 2-rank tensor.
+  Returns a tensor with all zero elements.
+
+      iex> #{__MODULE__}.zero([4, 4, 2])
+      %#{__MODULE__}{data: nil, shape: [4, 4, 2]}
   """
-  def tridiagonalize(%__MODULE__{data: d, shape: [n, n]}) do
+  def zero(s) when is_list(s) do
+    if Enum.all?(s, &(is_integer(&1) and &1 > 0)) do
+      %__MODULE__{shape: s}
+    else
+      raise ArgumentError, "expected a list of positive integers, got: #{s}"
+    end
+  end
+
+  @doc """
+  Tridiagonalize a symmetric 2-rank tensor.
+
+      iex> #{__MODULE__}.tridiagonalize(#{__MODULE__}.from_list([[2,  3,  5,  7],
+      ...>                                                       [3,  5,  7, 11],
+      ...>                                                       [5,  7, 11, 13],
+      ...>                                                       [7, 11, 13, 17]]))
+      %#{__MODULE__}{data: %{1 => %{1 => 2              , 2 =>  9.1104335791443                                                       },
+                             2 => %{1 => 9.1104335791443, 2 => 32.951807228915655 , 3 =>  3.4428330112804253                          },
+                             3 => %{                      2 =>  3.4428330112804253, 3 => -1.2030073856708294, 4 => -0.4793085952778015},
+                             4 => %{                                                3 => -0.479308595277802 , 4 =>  1.251200156755166 }}, shape: [4, 4]}
+  """
+  def tridiagonalize(%__MODULE__{shape: [2, 2]} = t), do: t
+
+  def tridiagonalize(%__MODULE__{shape: [n, n]} = t) do
+    {v, p} = householder(slice(t[1], [2..n]))
+
+    s =
+      p |> multiply(slice(t, [2..n, 2..n]), [{1, 0}]) |> multiply(p, [{1, 0}]) |> tridiagonalize()
+
+    zero([n, n])
+    |> put_in([1, 1], t[1][1])
+    |> put_in([1, 2], v[1])
+    |> put_in([2, 1], v[1])
+    |> map(s, [2, 2])
   end
 end
