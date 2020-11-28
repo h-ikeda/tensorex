@@ -2,20 +2,20 @@ defmodule Tensorex do
   @moduledoc """
   The module to oparate with tensors.
   """
-  @typep data :: %{pos_integer => data | number}
-  @opaque t :: %__MODULE__{data: data | nil, shape: [pos_integer]}
+  @typep data :: %{non_neg_integer => data | number}
+  @opaque t :: %__MODULE__{data: data | nil, shape: [non_neg_integer]}
   defstruct [:data, :shape]
   @type data_list :: [data_list | number]
   @doc """
   Create a new tensor from list.
 
       iex> #{__MODULE__}.from_list([1.1, 2.1, -5.3, 4])
-      %#{__MODULE__}{data: %{1 => 1.1, 2 => 2.1, 3 => -5.3, 4 => 4}, shape: [4]}
+      %#{__MODULE__}{data: %{0 => 1.1, 1 => 2.1, 2 => -5.3, 3 => 4}, shape: [4]}
 
       iex> #{__MODULE__}.from_list([[1.1,  2.1, -5.3, 4  ],
       ...>                          [0.8, -8,   21.4, 3.3]])
-      %#{__MODULE__}{data: %{1 => %{1 => 1.1, 2 =>  2.1, 3 => -5.3, 4 => 4  },
-                             2 => %{1 => 0.8, 2 => -8,   3 => 21.4, 4 => 3.3}}, shape: [2, 4]}
+      %#{__MODULE__}{data: %{0 => %{0 => 1.1, 1 =>  2.1, 2 => -5.3, 3 => 4  },
+                             1 => %{0 => 0.8, 1 => -8,   2 => 21.4, 3 => 3.3}}, shape: [2, 4]}
 
       iex> #{__MODULE__}.from_list([[[0.0, 0.0, 0.0],
       ...>                           [0.0, 0.0, 0.0]],
@@ -33,7 +33,7 @@ defmodule Tensorex do
         %__MODULE__{
           data:
             d
-            |> Stream.with_index(1)
+            |> Stream.with_index()
             |> Stream.filter(&(elem(&1, 0) != 0))
             |> Enum.into(%{}, &{elem(&1, 1), elem(&1, 0)}),
           shape: [length(d)]
@@ -50,7 +50,7 @@ defmodule Tensorex do
             data:
               d
               |> Stream.map(& &1.data)
-              |> Stream.with_index(1)
+              |> Stream.with_index()
               |> Stream.filter(&elem(&1, 0))
               |> Enum.into(%{}, &{elem(&1, 1), elem(&1, 0)}),
             shape: [length(d) | s]
@@ -68,7 +68,7 @@ defmodule Tensorex do
       ...>                           [ 0.9 ,  -91.2,  11  ]],
       ...>                          [[10   ,  -30.1,  20  ],
       ...>                           [40   ,   50  , -60.1],
-      ...>                           [ 0.09, -910.2, 110  ]]])[1][1][1]
+      ...>                           [ 0.09, -910.2, 110  ]]])[0][0][0]
       1
 
       iex> #{__MODULE__}.from_list([[[ 1   ,   -3.1,   2  ],
@@ -76,39 +76,39 @@ defmodule Tensorex do
       ...>                           [ 0.9 ,  -91.2,  11  ]],
       ...>                          [[10   ,  -30.1,  20  ],
       ...>                           [40   ,   50  , -60.1],
-      ...>                           [ 0.09, -910.2, 110  ]]])[1][1]
-      %#{__MODULE__}{data: %{1 => 1, 2 => -3.1, 3 => 2}, shape: [3]}
+      ...>                           [ 0.09, -910.2, 110  ]]])[0][0]
+      %#{__MODULE__}{data: %{0 => 1, 1 => -3.1, 2 => 2}, shape: [3]}
 
       iex> #{__MODULE__}.from_list([[[ 1   ,   -3.1,   2  ],
       ...>                           [ 4   ,    5  ,  -6.1],
       ...>                           [ 0.9 ,  -91.2,  11  ]],
       ...>                          [[10   ,  -30.1,  20  ],
       ...>                           [40   ,   50  , -60.1],
-      ...>                           [ 0.09, -910.2, 110  ]]])[1]
-      %#{__MODULE__}{data: %{1 => %{1 => 1  , 2 =>  -3.1, 3 =>  2  },
-                             2 => %{1 => 4  , 2 =>   5  , 3 => -6.1},
-                             3 => %{1 => 0.9, 2 => -91.2, 3 => 11  }}, shape: [3, 3]}
+      ...>                           [ 0.09, -910.2, 110  ]]])[0]
+      %#{__MODULE__}{data: %{0 => %{0 => 1  , 1 =>  -3.1, 2 =>  2  },
+                             1 => %{0 => 4  , 1 =>   5  , 2 => -6.1},
+                             2 => %{0 => 0.9, 1 => -91.2, 2 => 11  }}, shape: [3, 3]}
 
       iex> #{__MODULE__}.from_list([[[ 1   ,   -3.1,   2  ],
       ...>                           [ 4   ,    5  ,  -6.1],
       ...>                           [ 0.9 ,  -91.2,  11  ]],
       ...>                          [[10   ,  -30.1,  20  ],
       ...>                           [40   ,   50  , -60.1],
-      ...>                           [ 0.09, -910.2, 110  ]]])[3]
+      ...>                           [ 0.09, -910.2, 110  ]]])[2]
       nil
   """
   @impl true
-  def fetch(%__MODULE__{data: nil, shape: [d]}, i) when i in 1..d, do: {:ok, 0.0}
+  def fetch(%__MODULE__{data: nil, shape: [d]}, i) when i in 0..(d - 1), do: {:ok, 0.0}
 
-  def fetch(%__MODULE__{data: v, shape: [d]}, i) when i in 1..d do
+  def fetch(%__MODULE__{data: v, shape: [d]}, i) when i in 0..(d - 1) do
     {:ok, Map.get(v, i, 0.0)}
   end
 
-  def fetch(%__MODULE__{data: nil, shape: [d | s]}, i) when i in 1..d do
+  def fetch(%__MODULE__{data: nil, shape: [d | s]}, i) when i in 0..(d - 1) do
     {:ok, %__MODULE__{shape: s}}
   end
 
-  def fetch(%__MODULE__{data: v, shape: [d | s]}, i) when i in 1..d do
+  def fetch(%__MODULE__{data: v, shape: [d | s]}, i) when i in 0..(d - 1) do
     {:ok, %__MODULE__{data: Map.get(v, i), shape: s}}
   end
 
@@ -123,13 +123,13 @@ defmodule Tensorex do
       ...>                             [ 0.9 ,  -91.2,  11  ]],
       ...>                            [[10   ,  -30.1,  20  ],
       ...>                             [40   ,   50  , -60.1],
-      ...>                             [ 0.09, -910.2, 110  ]]])[1][2][1], &{&1, &1 * 3.5})
-      {4, %#{__MODULE__}{data: %{1 => %{1 => %{1 =>  1   , 2 =>   -3.1, 3 =>   2  },
-                                        2 => %{1 => 14.0 , 2 =>    5  , 3 =>  -6.1},
-                                        3 => %{1 =>  0.9 , 2 =>  -91.2, 3 =>  11  }},
-                                 2 => %{1 => %{1 => 10   , 2 =>  -30.1, 3 =>  20  },
-                                        2 => %{1 => 40   , 2 =>   50  , 3 => -60.1},
-                                        3 => %{1 =>  0.09, 2 => -910.2, 3 => 110  }}}, shape: [2, 3, 3]}}
+      ...>                             [ 0.09, -910.2, 110  ]]])[0][1][0], &{&1, &1 * 3.5})
+      {4, %#{__MODULE__}{data: %{0 => %{0 => %{0 =>  1   , 1 =>   -3.1, 2 =>   2  },
+                                        1 => %{0 => 14.0 , 1 =>    5  , 2 =>  -6.1},
+                                        2 => %{0 =>  0.9 , 1 =>  -91.2, 2 =>  11  }},
+                                 1 => %{0 => %{0 => 10   , 1 =>  -30.1, 2 =>  20  },
+                                        1 => %{0 => 40   , 1 =>   50  , 2 => -60.1},
+                                        2 => %{0 =>  0.09, 1 => -910.2, 2 => 110  }}}, shape: [2, 3, 3]}}
   """
   @impl true
   def get_and_update(t, i, f) do
@@ -209,28 +209,28 @@ defmodule Tensorex do
       ...>                             [ 0.9 ,  -91.2,  11  ]],
       ...>                            [[10   ,  -30.1,  20  ],
       ...>                             [40   ,   50  , -60.1],
-      ...>                             [ 0.09, -910.2, 110  ]]]), 1)
+      ...>                             [ 0.09, -910.2, 110  ]]]), 0)
       {
-        %#{__MODULE__}{data: %{1 => %{1 => 1, 2 => -3.1, 3 => 2},
-                               2 => %{1 => 4, 2 => 5, 3 => -6.1},
-                               3 => %{1 => 0.9, 2 => -91.2, 3 => 11}}, shape: [3, 3]},
-        %#{__MODULE__}{data: %{2 => %{1 => %{1 => 10   , 2 =>  -30.1, 3 =>  20  },
-                                      2 => %{1 => 40   , 2 =>   50  , 3 => -60.1},
-                                      3 => %{1 =>  0.09, 2 => -910.2, 3 => 110  }}}, shape: [2, 3, 3]}}
+        %#{__MODULE__}{data: %{0 => %{0 => 1,   1 => -3.1 , 2 =>  2  },
+                               1 => %{0 => 4,   1 =>  5   , 2 => -6.1},
+                               2 => %{0 => 0.9, 1 => -91.2, 2 => 11  }}, shape: [3, 3]},
+        %#{__MODULE__}{data: %{1 => %{0 => %{0 => 10   , 1 =>  -30.1, 2 =>  20  },
+                                      1 => %{0 => 40   , 1 =>   50  , 2 => -60.1},
+                                      2 => %{0 =>  0.09, 1 => -910.2, 2 => 110  }}}, shape: [2, 3, 3]}}
   """
   @impl true
   def pop(%__MODULE__{data: v, shape: [_]} = t, i) when is_map_key(v, i) do
     {v[i], %{t | data: Map.delete(v, i)}}
   end
 
-  def pop(%__MODULE__{shape: [d]} = t, i) when i in 1..d, do: {0.0, t}
+  def pop(%__MODULE__{shape: [d]} = t, i) when i in 0..(d - 1), do: {0.0, t}
 
   def pop(%__MODULE__{data: v} = t, i) when is_map_key(v, i) and map_size(v) > 1 do
     {t[i], %{t | data: Map.delete(v, i)}}
   end
 
   def pop(%__MODULE__{data: v} = t, i) when is_map_key(v, i), do: {t[i], %{t | data: nil}}
-  def pop(%__MODULE__{shape: [d | _]} = t, i) when i in 1..d, do: {t[i], t}
+  def pop(%__MODULE__{shape: [d | _]} = t, i) when i in 0..(d - 1), do: {t[i], t}
 
   @doc """
   Adds tensors.
@@ -240,15 +240,15 @@ defmodule Tensorex do
       ...>                            [3, -4  , -5.5]]),
       ...>   #{__MODULE__}.from_list([[3, -2  , -2  ],
       ...>                            [6, -8.1, 12  ]]))
-      %#{__MODULE__}{data: %{1 => %{1 => 3, 2 =>  -1            },
-                             2 => %{1 => 9, 2 => -12.1, 3 => 6.5}}, shape: [2, 3]}
+      %#{__MODULE__}{data: %{0 => %{0 => 3, 1 =>  -1            },
+                             1 => %{0 => 9, 1 => -12.1, 2 => 6.5}}, shape: [2, 3]}
 
       iex> #{__MODULE__}.add(
       ...>   #{__MODULE__}.from_list([[0  ,  1  ,  2  ],
       ...>                            [3  , -4  , -5.5]]),
       ...>   #{__MODULE__}.from_list([[0.0, -1  , -2  ],
       ...>                            [6  , -8.1, 12  ]]))
-      %#{__MODULE__}{data: %{2 => %{1 => 9, 2 => -12.1, 3 => 6.5}}, shape: [2, 3]}
+      %#{__MODULE__}{data: %{1 => %{0 => 9, 1 => -12.1, 2 => 6.5}}, shape: [2, 3]}
   """
   @spec add(t, t) :: t
   def add(%__MODULE__{data: nil, shape: s}, %__MODULE__{shape: s} = t), do: t
@@ -286,13 +286,13 @@ defmodule Tensorex do
       iex> #{__MODULE__}.subtract(
       ...>   #{__MODULE__}.from_list([[0,  1,  2], [3, -4,   -5.5]]),
       ...>   #{__MODULE__}.from_list([[3, -2, -2], [6, -8.1, 12  ]]))
-      %#{__MODULE__}{data: %{1 => %{1 => -3, 2 => 3  , 3 =>   4  },
-                             2 => %{1 => -3, 2 => 4.1, 3 => -17.5}}, shape: [2, 3]}
+      %#{__MODULE__}{data: %{0 => %{0 => -3, 1 => 3  , 2 =>   4  },
+                             1 => %{0 => -3, 1 => 4.1, 2 => -17.5}}, shape: [2, 3]}
 
       iex> #{__MODULE__}.subtract(
       ...>   #{__MODULE__}.from_list([[0,   1, 2], [3, -4,   -5.5]]),
       ...>   #{__MODULE__}.from_list([[0.0, 1, 2], [6, -8.1, 12  ]]))
-      %#{__MODULE__}{data: %{2 => %{1 => -3, 2 => 4.1, 3 => -17.5}}, shape: [2, 3]}
+      %#{__MODULE__}{data: %{1 => %{0 => -3, 1 => 4.1, 2 => -17.5}}, shape: [2, 3]}
   """
   @spec subtract(t, t) :: t
   def subtract(%__MODULE__{data: nil, shape: s}, %__MODULE__{shape: s} = t), do: negate(t)
@@ -308,8 +308,8 @@ defmodule Tensorex do
       iex> #{__MODULE__}.negate(
       ...>   #{__MODULE__}.from_list([[ 2  , 3.5, -4  , 0  ],
       ...>                            [-2.2, 6  ,  0.0, 5.5]]))
-      %#{__MODULE__}{data: %{1 => %{1 => -2  , 2 => -3.5, 3 => 4           },
-                             2 => %{1 =>  2.2, 2 => -6  ,         4 => -5.5}}, shape: [2, 4]}
+      %#{__MODULE__}{data: %{0 => %{0 => -2  , 1 => -3.5, 2 => 4           },
+                             1 => %{0 =>  2.2, 1 => -6  ,         3 => -5.5}}, shape: [2, 4]}
   """
   @spec negate(t) :: t
   def negate(%__MODULE__{data: nil} = t), do: t
@@ -324,15 +324,15 @@ defmodule Tensorex do
       iex> #{__MODULE__}.multiply(
       ...>   #{__MODULE__}.from_list([2, 5.2, -4  , 0  ]),
       ...>   #{__MODULE__}.from_list([2, 3.5, -1.6, 8.2]))
-      %#{__MODULE__}{data: %{1 => %{1 => 4   , 2 =>   7.0, 3 => -3.2 , 4 => 16.4 },
-                             2 => %{1 => 10.4, 2 =>  18.2, 3 => -8.32, 4 => 42.64},
-                             3 => %{1 => -8  , 2 => -14.0, 3 =>  6.4 , 4 => -32.8}}, shape: [4, 4]}
+      %#{__MODULE__}{data: %{0 => %{0 => 4   , 1 =>   7.0, 2 => -3.2 , 3 => 16.4 },
+                             1 => %{0 => 10.4, 1 =>  18.2, 2 => -8.32, 3 => 42.64},
+                             2 => %{0 => -8  , 1 => -14.0, 2 =>  6.4 , 3 => -32.8}}, shape: [4, 4]}
 
       iex> #{__MODULE__}.multiply(3.5,
       ...>   #{__MODULE__}.from_list([[2   ,  3.5, -1.5, 8.0],
       ...>                            [4.12, -2  ,  1  , 0  ]]))
-      %#{__MODULE__}{data: %{1 => %{1 =>  7.0 , 2 => 12.25, 3 => -5.25, 4 => 28.0},
-                             2 => %{1 => 14.42, 2 => -7.0 , 3 =>  3.5            }}, shape: [2, 4]}
+      %#{__MODULE__}{data: %{0 => %{0 =>  7.0 , 1 => 12.25, 2 => -5.25, 3 => 28.0},
+                             1 => %{0 => 14.42, 1 => -7.0 , 2 =>  3.5            }}, shape: [2, 4]}
   """
   @spec multiply(t | number, t | number) :: t
   def multiply(%__MODULE__{data: nil, shape: s1} = t, %__MODULE__{shape: s2}) do
@@ -385,9 +385,9 @@ defmodule Tensorex do
       ...>                            [-1.6 ,  8.2],
       ...>                            [ 2   , -3.5],
       ...>                            [-1.5 ,  8.0]]), [{0, 1}])
-      %#{__MODULE__}{data: %{1 => %{1 => 18.42, 2 =>  30.584, 3 => -10.42, 4 =>  29.96},
-                             2 => %{1 =>  4.0 , 2 => -25.2  , 3 =>  18.0 , 4 => -24.25},
-                             3 => %{1 => -4.5 , 2 =>  14.6  , 3 => -11.5 , 4 =>  14.0 }}, shape: [4, 4]}
+      %#{__MODULE__}{data: %{0 => %{0 => 18.42, 1 =>  30.584, 2 => -10.42, 3 =>  29.96},
+                             1 => %{0 =>  4.0 , 1 => -25.2  , 2 =>  18.0 , 3 => -24.25},
+                             2 => %{0 => -4.5 , 1 =>  14.6  , 2 => -11.5 , 3 =>  14.0 }}, shape: [4, 4]}
   """
   @spec multiply(t, t, axes :: [{non_neg_integer, non_neg_integer}]) :: t | number
   def multiply(%__MODULE__{data: nil, shape: s1} = t, %__MODULE__{shape: s2}, a) do
@@ -414,7 +414,7 @@ defmodule Tensorex do
     end
   end
 
-  @spec contract_shape({[pos_integer], [non_neg_integer]}) :: Enum.t()
+  @spec contract_shape({[non_neg_integer], [non_neg_integer]}) :: Enum.t()
   defp contract_shape({s, a}) do
     Stream.with_index(s) |> Stream.reject(&(elem(&1, 1) in a)) |> Stream.map(&elem(&1, 0))
   end
@@ -471,7 +471,7 @@ defmodule Tensorex do
     end)
   end
 
-  @spec composite_by_axis([{[pos_integer], data}]) :: data
+  @spec composite_by_axis([{[non_neg_integer], data}]) :: data
   defp composite_by_axis([{[], d}]), do: d
 
   defp composite_by_axis(d) do
@@ -485,8 +485,8 @@ defmodule Tensorex do
       iex> #{__MODULE__}.divide(
       ...>   #{__MODULE__}.from_list([[2  , 3.5, -1.6,   8.2],
       ...>                            [1.1, 3.0,  0  , -12.1]]), 4)
-      %#{__MODULE__}{data: %{1 => %{1 => 0.5  , 2 => 0.875, 3 => -0.4, 4 => 2.05  },
-                             2 => %{1 => 0.275, 2 => 0.75 ,            4 => -3.025}}, shape: [2, 4]}
+      %#{__MODULE__}{data: %{0 => %{0 => 0.5  , 1 => 0.875, 2 => -0.4, 3 =>  2.05 },
+                             1 => %{0 => 0.275, 1 => 0.75 ,            3 => -3.025}}, shape: [2, 4]}
   """
   @spec divide(t, number) :: t
   def divide(%__MODULE__{data: nil} = t, s) when is_number(s) and s != 0, do: t
@@ -499,13 +499,13 @@ defmodule Tensorex do
   Returns a `n` × `n` tensor representing the kronecker delta.
 
       iex> #{__MODULE__}.kronecker_delta(3)
-      %#{__MODULE__}{data: %{1 => %{1 => 1              },
-                             2 => %{       2 => 1       },
-                             3 => %{              3 => 1}}, shape: [3, 3]}
+      %#{__MODULE__}{data: %{0 => %{0 => 1              },
+                             1 => %{       1 => 1       },
+                             2 => %{              2 => 1}}, shape: [3, 3]}
   """
   @spec kronecker_delta(pos_integer) :: t
   def kronecker_delta(n) when is_integer(n) and n > 0 do
-    %__MODULE__{data: Enum.into(1..n, %{}, &{&1, %{&1 => 1}}), shape: [n, n]}
+    %__MODULE__{data: Enum.into(0..(n - 1), %{}, &{&1, %{&1 => 1}}), shape: [n, n]}
   end
 
   @doc """
@@ -515,23 +515,23 @@ defmodule Tensorex do
   Applying the conversion tensor to the given vector results to the converted vector.
 
       iex> #{__MODULE__}.householder(#{__MODULE__}.from_list([2  , 3.5, -1.6,   8.2]))
-      {%#{__MODULE__}{data: %{1 => 9.276313923105448}, shape: [4]},
-       %#{__MODULE__}{data: %{1 => %{1 => 0.21560288025811614, 2 => 0.3773050404517034  , 3 => -0.172482304206493, 4 => 0.8839718090582764},
-                              2 => %{1 => 0.3773050404517034 , 2 => 0.8185114529779167  , 3 => 0.0829661929243809, 4 => -0.42520173873745204},
-                              3 => %{1 => -0.172482304206493 , 2 => 0.0829661929243809  , 3 => 0.9620725975202831, 4 => 0.1943779377085495},
-                              4 => %{1 => 0.8839718090582764 , 2 => -0.42520173873745204, 3 => 0.1943779377085495, 4 => 0.003813069243683853}}, shape: [4, 4]}}
+      {%#{__MODULE__}{data: %{0 => 9.276313923105448}, shape: [4]},
+       %#{__MODULE__}{data: %{0 => %{0 => 0.21560288025811614, 1 => 0.3773050404517034  , 2 => -0.172482304206493, 3 => 0.8839718090582764},
+                              1 => %{0 => 0.3773050404517034 , 1 => 0.8185114529779167  , 2 => 0.0829661929243809, 3 => -0.42520173873745204},
+                              2 => %{0 => -0.172482304206493 , 1 => 0.0829661929243809  , 2 => 0.9620725975202831, 3 => 0.1943779377085495},
+                              3 => %{0 => 0.8839718090582764 , 1 => -0.42520173873745204, 2 => 0.1943779377085495, 3 => 0.003813069243683853}}, shape: [4, 4]}}
   """
   @spec householder(t) :: {t, t}
-  def householder(%__MODULE__{data: %{1 => x}, shape: [s]} = t) do
+  def householder(%__MODULE__{data: %{0 => x}, shape: [s]} = t) do
     dot = multiply(t, t, [{0, 0}])
     norm = if x < 0, do: :math.sqrt(dot), else: :math.sqrt(dot)
-    v = divide(put_in(t[1], x - norm), dot * :math.sqrt(2 * abs(x - norm)))
+    v = divide(put_in(t[0], x - norm), dot * :math.sqrt(2 * abs(x - norm)))
 
     p =
       kronecker_delta(s)
       |> subtract(multiply(v, v) |> divide(multiply(v, v, [{0, 0}])) |> multiply(2))
 
-    {%{t | data: %{1 => norm}}, p}
+    {%{t | data: %{0 => norm}}, p}
   end
 
   @doc """
@@ -540,21 +540,21 @@ defmodule Tensorex do
       iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
       ...>                                             [ 4,  5,  6],
       ...>                                             [ 7,  8,  9],
-      ...>                                             [10, 11, 12]]), [2..3])
-      %#{__MODULE__}{data: %{1 => %{1 => 4, 2 => 5, 3 => 6},
-                             2 => %{1 => 7, 2 => 8, 3 => 9}}, shape: [2, 3]}
+      ...>                                             [10, 11, 12]]), [1..2])
+      %#{__MODULE__}{data: %{0 => %{0 => 4, 1 => 5, 2 => 6},
+                             1 => %{0 => 7, 1 => 8, 2 => 9}}, shape: [2, 3]}
       iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
       ...>                                             [ 4,  5,  6],
       ...>                                             [ 7,  8,  9],
       ...>                                             [10, 11, 12]]), [-2..-1])
-      %#{__MODULE__}{data: %{1 => %{1 =>  7, 2 =>  8, 3 =>  9},
-                             2 => %{1 => 10, 2 => 11, 3 => 12}}, shape: [2, 3]}
+      %#{__MODULE__}{data: %{0 => %{0 =>  7, 1 =>  8, 2 =>  9},
+                             1 => %{0 => 10, 1 => 11, 2 => 12}}, shape: [2, 3]}
       iex>#{__MODULE__}.slice(#{__MODULE__}.from_list([[ 1,  2,  3],
       ...>                                             [ 4,  5,  6],
       ...>                                             [ 7,  8,  9],
-      ...>                                             [10, 11, 12]]), [2..3, 2..-1])
-      %#{__MODULE__}{data: %{1 => %{1 => 5, 2 => 6},
-                             2 => %{1 => 8, 2 => 9}}, shape: [2, 2]}
+      ...>                                             [10, 11, 12]]), [1..2, 1..-1])
+      %#{__MODULE__}{data: %{0 => %{0 => 5, 1 => 6},
+                             1 => %{0 => 8, 1 => 9}}, shape: [2, 2]}
   """
   @spec slice(t, [Range.t()]) :: t
   def slice(%__MODULE__{data: d, shape: s}, r) do
@@ -562,19 +562,19 @@ defmodule Tensorex do
     %__MODULE__{data: pick(d, s, r), shape: s1 ++ s2}
   end
 
-  @spec pick(data, [pos_integer], [Range.t()]) :: data
+  @spec pick(data, [non_neg_integer], [Range.t()]) :: data
   defp pick(d, _, []), do: d
 
   defp pick(%{} = d, [w | s], [a | c]) do
     m.._ = r = normalize_range(a, w)
 
     Stream.filter(d, &(elem(&1, 0) in r))
-    |> Enum.into(%{}, fn {i, u} -> {i - m + 1, pick(u, s, c)} end)
+    |> Enum.into(%{}, fn {i, u} -> {i - m, pick(u, s, c)} end)
   end
 
   @spec normalize_range(Range.t(), pos_integer) :: Range.t()
-  defp normalize_range(a..b, s) when a < 0, do: normalize_range((s + a + 1)..b, s)
-  defp normalize_range(a..b, s) when b < 0, do: a..(s + b + 1)
+  defp normalize_range(a..b, s) when a < 0, do: normalize_range((s + a)..b, s)
+  defp normalize_range(a..b, s) when b < 0, do: a..(s + b)
   defp normalize_range(r, _), do: r
 
   @doc """
@@ -586,11 +586,11 @@ defmodule Tensorex do
       ...>                           [ 7,  8,  9],
       ...>                           [10, 11, 12]]),
       ...>  #{__MODULE__}.from_list([[13, 14],
-      ...>                           [15, 16]]), [2, 2])
-      %#{__MODULE__}{data: %{1 => %{1 =>  1, 2 =>  2, 3 =>  3},
-                             2 => %{1 =>  4, 2 => 13, 3 => 14},
-                             3 => %{1 =>  7, 2 => 15, 3 => 16},
-                             4 => %{1 => 10, 2 => 11, 3 => 12}}, shape: [4, 3]}
+      ...>                           [15, 16]]), [1, 1])
+      %#{__MODULE__}{data: %{0 => %{0 =>  1, 1 =>  2, 2 =>  3},
+                             1 => %{0 =>  4, 1 => 13, 2 => 14},
+                             2 => %{0 =>  7, 1 => 15, 2 => 16},
+                             3 => %{0 => 10, 1 => 11, 2 => 12}}, shape: [4, 3]}
 
       iex>#{__MODULE__}.map(
       ...>  #{__MODULE__}.from_list([[ 1,  2,  3],
@@ -598,23 +598,23 @@ defmodule Tensorex do
       ...>                           [ 7,  8,  9],
       ...>                           [10, 11, 12]]),
       ...>  #{__MODULE__}.from_list([[ 0,  0],
-      ...>                           [ 0, 16]]), [3])
-      %#{__MODULE__}{data: %{1 => %{1 =>  1, 2 =>  2, 3 =>  3},
-                             2 => %{1 =>  4, 2 =>  5, 3 =>  6},
-                             3 => %{                  3 =>  9},
-                             4 => %{         2 => 16, 3 => 12}}, shape: [4, 3]}
+      ...>                           [ 0, 16]]), [2])
+      %#{__MODULE__}{data: %{0 => %{0 =>  1, 1 =>  2, 2 =>  3},
+                             1 => %{0 =>  4, 1 =>  5, 2 =>  6},
+                             2 => %{                  2 =>  9},
+                             3 => %{         1 => 16, 2 => 12}}, shape: [4, 3]}
   """
-  @spec map(t, t, [pos_integer]) :: t
+  @spec map(t, t, [non_neg_integer]) :: t
   def map(%__MODULE__{data: d1, shape: s1} = t, %__MODULE__{data: d2, shape: s2}, offset)
       when length(s1) === length(s2) do
     %{t | data: merge(erase(d1, s2, offset), offset(d2, offset), :add)}
   end
 
-  @spec offset(data | number, [pos_integer]) :: data
+  @spec offset(data | number, [non_neg_integer]) :: data
   defp offset(d, []), do: d
 
   defp offset(%{} = d, [o | n]) do
-    Enum.into(d, %{}, fn {i, v} -> {i + o - 1, offset(v, n)} end)
+    Enum.into(d, %{}, fn {i, v} -> {i + o, offset(v, n)} end)
   end
 
   @spec erase(data | number, [pos_integer], [pos_integer]) :: data | nil
@@ -622,7 +622,7 @@ defmodule Tensorex do
 
   defp erase(%{} = d, [s | m], []) do
     Stream.flat_map(d, fn
-      {i, v} when i <= s -> if u = erase(v, m, []), do: [{i, u}], else: []
+      {i, v} when i < s -> if u = erase(v, m, []), do: [{i, u}], else: []
       v -> [v]
     end)
     |> Enum.into(%{})
@@ -659,23 +659,32 @@ defmodule Tensorex do
       ...>                                                       [3,  5,  7, 11],
       ...>                                                       [5,  7, 11, 13],
       ...>                                                       [7, 11, 13, 17]]))
-      %#{__MODULE__}{data: %{1 => %{1 => 2              , 2 =>  9.1104335791443                                                       },
-                             2 => %{1 => 9.1104335791443, 2 => 32.951807228915655 , 3 =>  3.4428330112804253                          },
-                             3 => %{                      2 =>  3.4428330112804253, 3 => -1.2030073856708294, 4 => -0.4793085952778015},
-                             4 => %{                                                3 => -0.479308595277802 , 4 =>  1.251200156755166 }}, shape: [4, 4]}
+      %#{__MODULE__}{data: %{0 => %{0 => 2              , 1 =>  9.1104335791443                                                       },
+                             1 => %{0 => 9.1104335791443, 1 => 32.951807228915655 , 2 =>  3.4428330112804253                          },
+                             2 => %{                      1 =>  3.4428330112804253, 2 => -1.2030073856708294, 3 => -0.4793085952778015},
+                             3 => %{                                                2 => -0.479308595277802 , 3 =>  1.251200156755166 }}, shape: [4, 4]}
   """
   def tridiagonalize(%__MODULE__{shape: [2, 2]} = t), do: t
 
   def tridiagonalize(%__MODULE__{shape: [n, n]} = t) do
-    {v, p} = householder(slice(t[1], [2..n]))
+    {v, p} = householder(slice(t[0], [1..(n - 1)]))
 
     s =
-      p |> multiply(slice(t, [2..n, 2..n]), [{1, 0}]) |> multiply(p, [{1, 0}]) |> tridiagonalize()
+      p
+      |> multiply(slice(t, [1..(n - 1), 1..(n - 1)]), [{1, 0}])
+      |> multiply(p, [{1, 0}])
+      |> tridiagonalize()
 
     zero([n, n])
-    |> put_in([1, 1], t[1][1])
-    |> put_in([1, 2], v[1])
-    |> put_in([2, 1], v[1])
-    |> map(s, [2, 2])
+    |> put_in([0, 0], t[0][0])
+    |> put_in([0, 1], v[0])
+    |> put_in([1, 0], v[0])
+    |> map(s, [1, 1])
+  end
+
+  @doc """
+
+  """
+  def jocobi(%__MODULE__{shape: [n, n]} = t) do
   end
 end
