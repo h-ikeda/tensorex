@@ -578,6 +578,67 @@ defmodule Tensorex do
   defp normalize_range(r, _), do: r
 
   @doc """
+  Updates the partial elements of the tensor.
+
+      iex>#{__MODULE__}.map(
+      ...>  #{__MODULE__}.from_list([[ 1,  2,  3],
+      ...>                           [ 4,  5,  6],
+      ...>                           [ 7,  8,  9],
+      ...>                           [10, 11, 12]]),
+      ...>  #{__MODULE__}.from_list([[13, 14],
+      ...>                           [15, 16]]), [2, 2])
+      %#{__MODULE__}{data: %{1 => %{1 =>  1, 2 =>  2, 3 =>  3},
+                             2 => %{1 =>  4, 2 => 13, 3 => 14},
+                             3 => %{1 =>  7, 2 => 15, 3 => 16},
+                             4 => %{1 => 10, 2 => 11, 3 => 12}}, shape: [4, 3]}
+
+      iex>#{__MODULE__}.map(
+      ...>  #{__MODULE__}.from_list([[ 1,  2,  3],
+      ...>                           [ 4,  5,  6],
+      ...>                           [ 7,  8,  9],
+      ...>                           [10, 11, 12]]),
+      ...>  #{__MODULE__}.from_list([[ 0,  0],
+      ...>                           [ 0, 16]]), [3])
+      %#{__MODULE__}{data: %{1 => %{1 =>  1, 2 =>  2, 3 =>  3},
+                             2 => %{1 =>  4, 2 =>  5, 3 =>  6},
+                             3 => %{                  3 =>  9},
+                             4 => %{         2 => 16, 3 => 12}}, shape: [4, 3]}
+  """
+  @spec map(t, t, [pos_integer]) :: t
+  def map(%__MODULE__{data: d1, shape: s1} = t, %__MODULE__{data: d2, shape: s2}, offset)
+      when length(s1) === length(s2) do
+    %{t | data: merge(erase(d1, s2, offset), offset(d2, offset), :add)}
+  end
+
+  @spec offset(data | number, [pos_integer]) :: data
+  defp offset(d, []), do: d
+
+  defp offset(%{} = d, [o | n]) do
+    Enum.into(d, %{}, fn {i, v} -> {i + o - 1, offset(v, n)} end)
+  end
+
+  @spec erase(data | number, [pos_integer], [pos_integer]) :: data | nil
+  defp erase(d, [], []), do: nil
+
+  defp erase(%{} = d, [s | m], []) do
+    Stream.flat_map(d, fn
+      {i, v} when i <= s -> if u = erase(v, m, []), do: [{i, u}], else: []
+      v -> [v]
+    end)
+    |> Enum.into(%{})
+    |> empty_map_to_nil()
+  end
+
+  defp erase(%{} = d, [s | m], [o | n]) do
+    Stream.flat_map(d, fn
+      {i, v} when o <= i and i < o + s -> if u = erase(v, m, n), do: [{i, u}], else: []
+      v -> [v]
+    end)
+    |> Enum.into(%{})
+    |> empty_map_to_nil()
+  end
+
+  @doc """
   Tridiagonalize a symmetric 2-rank tensor.
   """
   def tridiagonalize(%__MODULE__{data: d, shape: [n, n]}) do
