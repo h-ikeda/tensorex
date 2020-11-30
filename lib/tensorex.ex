@@ -404,7 +404,7 @@ defmodule Tensorex do
 
   def multiply(%__MODULE__{data: d1, shape: s1}, %__MODULE__{data: d2, shape: s2}, a) do
     {a1, a2} = Enum.unzip(a)
-    d = combination(swap_axes(d1, a1), swap_axes(d2, a2), Enum.count(a))
+    d = combine(swap_axes(d1, a1), swap_axes(d2, a2), Enum.count(a))
     s = Enum.flat_map([{s1, a1}, {s2, a2}], &contract_shape/1)
 
     cond do
@@ -430,12 +430,12 @@ defmodule Tensorex do
 
   defp replace(d1, d2, :prod), do: d1 * d2
   defp replace(d1, d2, :div), do: d1 / d2
-  @spec combination(data, data, non_neg_integer) :: data | number | nil
-  defp combination(d1, d2, 0), do: replace(d1, d2, :prod)
+  @spec combine(data, data, non_neg_integer) :: data | number | nil
+  defp combine(d1, d2, 0), do: replace(d1, d2, :prod)
 
-  defp combination(d1, d2, a) do
+  defp combine(d1, d2, a) do
     Stream.filter(d1, &is_map_key(d2, elem(&1, 0)))
-    |> Stream.map(fn {i, v1} -> combination(v1, d2[i], a - 1) end)
+    |> Stream.map(fn {i, v1} -> combine(v1, d2[i], a - 1) end)
     |> reduce(fn v1, v2 -> merge(v1, v2, :add) end)
   end
 
@@ -683,8 +683,82 @@ defmodule Tensorex do
   end
 
   @doc """
+  Returns pairs of an eigen value and a corresponding eigen vector of a 2-rank symmetric tensor.
 
+  You can also pass a non symmetric tensor only if the tensor has 2 or 3 dimensions.
+
+      iex> #{__MODULE__}.eigens(#{__MODULE__}.from_list([[8, 1],
+      ...>                                               [4, 5]]))
+      ...> |> Enum.to_list()
+      [{4.0, %#{__MODULE__}{data: %{0 => 0.24253562503633297, 1 => -0.9701425001453319}, shape: [2]}},
+       {9.0, %#{__MODULE__}{data: %{0 => 0.7071067811865475 , 1 =>  0.7071067811865475}, shape: [2]}}]
+
+      iex> #{__MODULE__}.eigens(#{__MODULE__}.from_list([[ 1,  8,  4],
+      ...>                                               [-3,  2, -6],
+      ...>                                               [ 8, -9, 11]]))
+      ...> |> Enum.to_list()
+      [{15.303170410844274 , %#{__MODULE__}{data: %{0 => 0.022124491408649645, 1 => -0.4151790326348706, 2 =>  0.909470657987536 }, shape: [3]}},
+       {-3.3868958657320674, %#{__MODULE__}{data: %{0 => 0.8133941080334768  , 1 => -0.1674957147614615, 2 => -0.5570773829127975}, shape: [3]}},
+       { 2.0837254548877966, %#{__MODULE__}{data: %{0 => 0.8433114989223975  , 1 => 0.32735161385148664, 2 => -0.4262236932575271}, shape: [3]}}]
   """
-  def jocobi(%__MODULE__{shape: [n, n]} = t) do
+  @spec eigens(t) :: Enum.t()
+  def eigens(%__MODULE__{shape: [2, 2]} = t) do
+    a = (t[0][0] + t[1][1]) * 0.5
+    b = :math.sqrt(a * a + t[0][1] * t[1][0] - t[0][0] * t[1][1])
+
+    Stream.map([a - b, a + b], fn l ->
+      y = (l - t[0][0]) / t[0][1]
+      w = :math.sqrt(1 + y * y)
+      {l, %__MODULE__{data: %{0 => 1 / w, 1 => y / w}, shape: [2]}}
+    end)
+  end
+
+  def eigens(%__MODULE__{shape: [3, 3]} = t) do
+    a = -t[0][0] - t[1][1] - t[2][2]
+
+    b =
+      t[0][0] * t[1][1] + t[0][0] * t[2][2] + t[1][1] * t[2][2] -
+        t[0][1] * t[1][0] - t[0][2] * t[2][0] - t[1][2] * t[2][1]
+
+    c =
+      t[0][0] * t[1][2] * t[2][1] + t[1][1] * t[0][2] * t[2][0] + t[2][2] * t[0][1] * t[1][0] -
+        t[0][0] * t[1][1] * t[2][2] - t[0][1] * t[1][2] * t[2][0] - t[0][2] * t[1][0] * t[2][1]
+
+    p = (3 * b - a * a) / 9
+    q = (27 * c + 2 * a * a * a - 9 * a * b) / 54
+
+    case q * q + p * p * p do
+      u when u < 0 ->
+        d = :math.sqrt(-u)
+        r = :math.sqrt(d * d + q * q)
+        h = :math.acos(-q / r)
+
+        [
+          :math.pow(r, 1 / 3) * 2 * :math.cos(h / 3) - a / 3,
+          :math.pow(r, 1 / 3) * (:math.sqrt(3) * :math.sin(-h / 3) - :math.cos(h / 3)) - a / 3,
+          :math.pow(r, 1 / 3) * (:math.sqrt(3) * :math.sin(h / 3) - :math.cos(h / 3)) - a / 3
+        ]
+
+      u ->
+        d = :math.sqrt(u)
+        [:math.pow(d - q, 1 / 3) + :math.pow(-q - d, 1 / 3) - a / 3]
+    end
+    |> Stream.map(fn l ->
+      y =
+        (t[0][2] * t[1][0] / t[1][2] - t[0][0] + l) /
+          (t[0][1] - t[0][2] * (t[1][1] - l) / t[1][2])
+
+      z =
+        (t[0][1] * t[1][0] / (t[1][1] - l) - t[0][0] + l) /
+          (t[0][2] - t[0][1] * t[1][2] / (t[1][1] - l))
+
+      w = :math.sqrt(1 + y * y + z * z)
+      {l, %__MODULE__{data: %{0 => 1 / w, 1 => y / w, 2 => z / w}, shape: [3]}}
+    end)
+  end
+
+  def eigens(%__MODULE__{shape: [n, n]} = t), do: qr(t)
+
+  defp qr(%__MODULE__{data: d, shape: [n, n]} = t) do
   end
 end
