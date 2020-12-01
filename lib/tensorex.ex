@@ -637,11 +637,22 @@ defmodule Tensorex do
                              1 => %{0 =>  4, 1 =>  5, 2 =>  6},
                              2 => %{                  2 =>  9},
                              3 => %{         1 => 16, 2 => 12}}, shape: [4, 3]}
+
+      iex>#{__MODULE__}.map(
+      ...>  #{__MODULE__}.from_list([[ 1,  2],
+      ...>                           [ 3,  4]]),
+      ...>  #{__MODULE__}.from_list([[-2,  0],
+      ...>                           [ 0, -3]]), [0])
+      %#{__MODULE__}{data: %{0 => %{0 =>  -2         },
+                             1 => %{         1 =>  -3}}, shape: [2, 2]}
   """
   @spec map(t, t, [non_neg_integer]) :: t
   def map(%__MODULE__{data: d1, shape: s1} = t, %__MODULE__{data: d2, shape: s2}, offset)
       when length(s1) === length(s2) do
-    %{t | data: merge(erase(d1, s2, offset), offset(d2, offset), :add)}
+    case erase(d1, s2, offset) do
+      nil -> %{t | data: offset(d2, offset)}
+      b -> %{t | data: merge(b, offset(d2, offset), :add)}
+    end
   end
 
   @spec offset(data | number, [non_neg_integer]) :: data
