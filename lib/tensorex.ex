@@ -448,6 +448,40 @@ defmodule Tensorex do
     end
   end
 
+  @doc """
+  Returns a transposed tensor.
+
+      iex> #{__MODULE__}.transpose(
+      ...>   #{__MODULE__}.from_list([[[ 2   ,  5.5, -4, 0  ],
+      ...>                             [ 4.12, -2  ,  1, 0  ]],
+      ...>                            [[ 3   ,  1.2,  5, 8.9],
+      ...>                             [ 1   ,  6  ,  7, 1.3]]]), [{0, 2}])
+      %#{__MODULE__}{data: %{0 => %{0 => %{0 =>  2   , 1 => 3  },
+                                    1 => %{0 =>  4.12, 1 => 1  }},
+                             1 => %{0 => %{0 =>  5.5 , 1 => 1.2},
+                                    1 => %{0 => -2   , 1 => 6  }},
+                             2 => %{0 => %{0 => -4   , 1 => 5  },
+                                    1 => %{0 =>  1   , 1 => 7  }},
+                             3 => %{0 => %{            1 => 8.9},
+                                    1 => %{            1 => 1.3}}}, shape: [4, 2, 2]}
+  """
+  @spec transpose(t, [{non_neg_integer, non_neg_integer}]) :: t
+  def transpose(%__MODULE__{} = t, []), do: t
+
+  def transpose(%__MODULE__{data: d, shape: s}, [{i, j} | p])
+      when is_integer(i) and is_integer(j) and 0 <= i and 0 <= j do
+    %__MODULE__{
+      data: swap_axes(d, i, j),
+      shape: s |> List.replace_at(i, Enum.at(s, j)) |> List.replace_at(j, Enum.at(s, i))
+    }
+    |> transpose(p)
+  end
+
+  @spec swap_axes(t, non_neg_integer, non_neg_integer) :: t
+  defp swap_axes(d, i, j) when j < i, do: swap_axes(d, j, i)
+  defp swap_axes(d, 0, j), do: swap_axes(d, Enum.to_list(j..1))
+  defp swap_axes(d, i, j), do: Enum.into(d, %{}, fn {k, v} -> {k, swap_axes(v, i - 1, j - 1)} end)
+
   @spec swap_axes(data, [non_neg_integer]) :: data
   defp swap_axes(d, []), do: d
   defp swap_axes(d, [i | a]), do: swap_axis(swap_axes(d, a), i - Enum.count(a, &(&1 > i)))
