@@ -416,7 +416,7 @@ defmodule Tensorex do
     if Enum.all?(shape, &is_positive_integer/1) do
       %Tensorex{data: %{}, shape: shape}
     else
-      raise ArgumentError, "expected a list of positive integers, got: #{shape}"
+      raise ArgumentError, "expected a list of positive integers, got: #{inspect(shape)}"
     end
   end
 
