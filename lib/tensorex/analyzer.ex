@@ -137,6 +137,15 @@ defmodule Tensorex.Analyzer do
                                                          [1, 1] => -0.5432512781572743, [1, 2] => -0.8395701571521512 ,
                                                          [2, 1] => -0.8395701571521512, [2, 2] =>  0.5432512781572743 }, shape: [3, 3]}
       }
+
+      iex> Tensorex.Analyzer.bidiagonalize(Tensorex.from_list([[1, 3, 5]]))
+      {
+        %Tensorex{data: %{[0, 0] => 1}, shape: [1, 1]},
+        %Tensorex{data: %{[0, 0] => 1, [0, 1] => -5.830951894845301                                }, shape: [1, 3]},
+        %Tensorex{data: %{[0, 0] => 1,
+                                       [1, 1] => -0.5144957554275265, [1, 2] => -0.8574929257125442,
+                                       [2, 1] => -0.8574929257125442, [2, 2] =>  0.5144957554275265}, shape: [3, 3]}
+      }
   """
   @spec bidiagonalize(Tensorex.t()) :: {Tensorex.t(), Tensorex.t(), Tensorex.t()}
   def bidiagonalize(%Tensorex{shape: [1, columns]} = matrix) when columns in 1..2 do
