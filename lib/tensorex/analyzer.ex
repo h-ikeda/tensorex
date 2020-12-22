@@ -497,6 +497,12 @@ defmodule Tensorex.Analyzer do
       %Tensorex{data: %{[0] =>  1.0000000000000002 ,
                         [1] =>  2.0000000000000004 ,
                         [2] => -1.0000000000000007}, shape: [3]}
+
+      iex> Tensorex.Analyzer.solve(
+      ...>   Tensorex.from_list([[5]]),
+      ...>   Tensorex.from_list([10])
+      ...> )
+      %Tensorex{data: %{[0] => 2.0}, shape: [1]}
   """
   @spec solve(Tensorex.t(), Tensorex.t()) :: Tensorex.t()
   def solve(
