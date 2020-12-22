@@ -1,10 +1,16 @@
 defmodule Tensorex do
   @moduledoc """
-  The module to operate basic commands with tensors.
+  Functions to operate basic commands with tensors.
+  """
+  @typedoc """
+  Represents a tensor.
 
-  The `Tensorex` struct keeps its dimensions and data. The data structure is a map with list keys
-  of indices and numeric values. The zero values are not stored as default for saving memories and
-  loosing calculation costs. However, if you explicitly put zeros
+  The data structure is a map with list of indices keys and numeric values. Zero values are
+  omitted. The shape is a list of each dimension at the order.
+
+  This module implements the `Access` behaviour. So that you can access elements of the tensor via
+  `tensor[indices]` syntax, where `indices` must be a list of `t:integer/0`s or `t:Range.t/0`s. See
+  `fetch/2` for concrete examples.
   """
   @type t :: %Tensorex{
           data: %{optional([non_neg_integer, ...]) => number},
@@ -13,7 +19,7 @@ defmodule Tensorex do
   defstruct [:data, :shape]
 
   @doc """
-  Create a new tensor from list (of list (of list of ...)).
+  Creates a new tensor from a list (of lists (of lists of ...)).
 
       iex> Tensorex.from_list([1.1, 2.1, -5.3, 4])
       %Tensorex{data: %{[0] => 1.1, [1] => 2.1, [2] => -5.3, [3] => 4}, shape: [4]}
@@ -70,6 +76,8 @@ defmodule Tensorex do
   The key can be a list of indices or ranges. If integer indices are given, it returns a tensor
   or a numeric value specified by the index. If ranges are given, it returns a tensor consisting
   partial elements.
+
+  Negative indices are counted from the end.
 
       iex> Tensorex.from_list([[[ 1   ,   -3.1,   2  ],
       ...>                      [ 4   ,    5  ,  -6.1],
@@ -332,7 +340,7 @@ defmodule Tensorex do
   end
 
   @doc """
-  Pop the tensor or the number stored at the index out of the tensor.
+  Pops the tensor or the number stored at the index out of the tensor.
 
       iex> pop_in(
       ...>   Tensorex.from_list([[[ 1   ,   -3.1,   2  ],
@@ -392,7 +400,7 @@ defmodule Tensorex do
   defguardp is_positive_integer(number) when is_integer(number) and number > 0
 
   @doc """
-  Returns a `n` × `n` tensor representing the kronecker delta.
+  Returns a 2-rank tensor with all diagonal elements of 1.
 
       iex> Tensorex.kronecker_delta(3)
       %Tensorex{data: %{[0, 0] => 1,
@@ -406,7 +414,7 @@ defmodule Tensorex do
   end
 
   @doc """
-  Returns a tensor with all zero elements.
+  Returns a tensor with all of zero elements.
 
       iex> Tensorex.zero([4, 4, 2])
       %Tensorex{data: %{}, shape: [4, 4, 2]}
@@ -421,7 +429,7 @@ defmodule Tensorex do
   end
 
   @doc """
-  Check if the given tensor is (upper) triangular or not.
+  Checks if the given tensor is upper triangular or not.
 
       iex> Tensorex.triangular?(Tensorex.from_list([[2, 1,  3],
       ...>                                          [0, 3,  6],
@@ -451,7 +459,7 @@ defmodule Tensorex do
   end
 
   @doc """
-  Check if the given tensor is diagonal or not.
+  Checks if the given tensor is diagonal or not.
 
       iex> Tensorex.diagonal?(Tensorex.from_list([[2, 0,  0],
       ...>                                        [0, 3,  0],

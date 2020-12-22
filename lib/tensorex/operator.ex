@@ -1,11 +1,11 @@
 defmodule Tensorex.Operator do
   @moduledoc """
-  The module to operate basic arithmetic operations with tensors.
+  Functions for basic arithmetic operations with tensors.
   """
   @doc """
-  Adds tensors.
+  Adds two tensors.
 
-      iex> #{__MODULE__}.add(
+      iex> Tensorex.Operator.add(
       ...>   Tensorex.from_list([[0,  1  ,  2  ],
       ...>                       [3, -4  , -5.5]]),
       ...>   Tensorex.from_list([[3, -2  , -2  ],
@@ -13,7 +13,7 @@ defmodule Tensorex.Operator do
       %Tensorex{data: %{[0, 0] => 3, [0, 1] =>  -1,
                         [1, 0] => 9, [1, 1] => -12.1, [1, 2] => 6.5}, shape: [2, 3]}
 
-      iex> #{__MODULE__}.add(
+      iex> Tensorex.Operator.add(
       ...>   Tensorex.from_list([[0  ,  1  ,  2  ],
       ...>                       [3  , -4  , -5.5]]),
       ...>   Tensorex.from_list([[0.0, -1  , -2  ],
@@ -40,13 +40,13 @@ defmodule Tensorex.Operator do
   @doc """
   Subtracts a tensor from another.
 
-      iex> #{__MODULE__}.subtract(
+      iex> Tensorex.Operator.subtract(
       ...>   Tensorex.from_list([[0,  1,  2], [3, -4,   -5.5]]),
       ...>   Tensorex.from_list([[3, -2, -2], [6, -8.1, 12  ]]))
       %Tensorex{data: %{[0, 0] => -3, [0, 1] => 3  , [0, 2] =>   4  ,
                         [1, 0] => -3, [1, 1] => 4.1, [1, 2] => -17.5}, shape: [2, 3]}
 
-      iex> #{__MODULE__}.subtract(
+      iex> Tensorex.Operator.subtract(
       ...>   Tensorex.from_list([[0,   1, 2], [3, -4,   -5.5]]),
       ...>   Tensorex.from_list([[0.0, 1, 2], [6, -8.1, 12  ]]))
       %Tensorex{data: %{[1, 0] => -3, [1, 1] => 4.1, [1, 2] => -17.5}, shape: [2, 3]}
@@ -68,7 +68,7 @@ defmodule Tensorex.Operator do
   @doc """
   Negates a tensor.
 
-      iex> #{__MODULE__}.negate(
+      iex> Tensorex.Operator.negate(
       ...>   Tensorex.from_list([[ 2  , 3.5, -4  , 0  ],
       ...>                       [-2.2, 6  ,  0.0, 5.5]]))
       %Tensorex{data: %{[0, 0] => -2  , [0, 1] => -3.5, [0, 2] => 4,
@@ -82,14 +82,17 @@ defmodule Tensorex.Operator do
   @doc """
   Makes a product of tensors.
 
-      iex> #{__MODULE__}.multiply(
+  If both arguments are tensors, it returns a tensor product of them. When one of arguments is a
+  `t:number/0`, then all elements of the tensor will be amplified by the scalar.
+
+      iex> Tensorex.Operator.multiply(
       ...>   Tensorex.from_list([2, 5.2, -4  , 0  ]),
       ...>   Tensorex.from_list([2, 3.5, -1.6, 8.2]))
       %Tensorex{data: %{[0, 0] => 4   , [0, 1] =>   7.0, [0, 2] => -3.2 , [0, 3] => 16.4 ,
                         [1, 0] => 10.4, [1, 1] =>  18.2, [1, 2] => -8.32, [1, 3] => 42.64,
                         [2, 0] => -8  , [2, 1] => -14.0, [2, 2] =>  6.4 , [2, 3] => -32.8}, shape: [4, 4]}
 
-      iex> #{__MODULE__}.multiply(3.5,
+      iex> Tensorex.Operator.multiply(3.5,
       ...>   Tensorex.from_list([[2   ,  3.5, -1.5, 8.0],
       ...>                       [4.12, -2  ,  1  , 0  ]]))
       %Tensorex{data: %{[0, 0] =>  7.0 , [0, 1] => 12.25, [0, 2] => -5.25, [0, 3] => 28.0,
@@ -123,14 +126,14 @@ defmodule Tensorex.Operator do
   @doc """
   Makes a dot product of tensors.
 
-  Components specified by the `axes` argument will be sumed up.
+  Components specified by the `axes` will be sumed up (or contracted).
 
-      iex> #{__MODULE__}.multiply(
+      iex> Tensorex.Operator.multiply(
       ...>   Tensorex.from_list([0, 0.0,  0.0, 0  ]),
       ...>   Tensorex.from_list([2, 3.5, -1.6, 8.2]), [{0, 0}])
       0.0
 
-      iex> #{__MODULE__}.multiply(
+      iex> Tensorex.Operator.multiply(
       ...>   Tensorex.from_list([[2  , 3.5, -1.6,   8.2],
       ...>                       [1.1, 3.0,  8  , -12.1]]),
       ...>   Tensorex.from_list([[0  , 0.0],
@@ -139,12 +142,12 @@ defmodule Tensorex.Operator do
       ...>                       [0  , 0  ]]), [{0, 1}, {1, 0}])
       0.0
 
-      iex> #{__MODULE__}.multiply(
+      iex> Tensorex.Operator.multiply(
       ...>   Tensorex.from_list([2, 5.2, -4  , 0  ]),
       ...>   Tensorex.from_list([2, 3.5, -1.6, 8.2]), [{0, 0}])
       28.6
 
-      iex> #{__MODULE__}.multiply(
+      iex> Tensorex.Operator.multiply(
       ...>   Tensorex.from_list([[ 2   ,  5.5, -4  , 0  ],
       ...>                       [ 4.12, -2  ,  1  , 0  ]]),
       ...>   Tensorex.from_list([[ 2   ,  3.5],
@@ -239,7 +242,7 @@ defmodule Tensorex.Operator do
   @doc """
   Returns a transposed tensor.
 
-      iex> #{__MODULE__}.transpose(
+      iex> Tensorex.Operator.transpose(
       ...>   Tensorex.from_list([[[ 2   ,  5.5, -4, 0  ],
       ...>                        [ 4.12, -2  ,  1, 0  ]],
       ...>                       [[ 3   ,  1.2,  5, 8.9],
@@ -253,7 +256,7 @@ defmodule Tensorex.Operator do
                                             [3, 0, 1] => 8.9,
                                             [3, 1, 1] => 1.3}, shape: [4, 2, 2]}
   """
-  @spec transpose(Tensorex.t(), [{non_neg_integer, non_neg_integer}]) :: Tensorex.t()
+  @spec transpose(Tensorex.t(), [{non_neg_integer, non_neg_integer}, ...]) :: Tensorex.t()
   def transpose(%Tensorex{data: store, shape: shape}, axes) when is_list(axes) do
     new_store =
       Enum.into(store, %{}, fn {index, value} ->
@@ -278,9 +281,9 @@ defmodule Tensorex.Operator do
   end
 
   @doc """
-  Divides all element of the tensor by the scalar.
+  Divides all elements of the tensor by the scalar.
 
-      iex> #{__MODULE__}.divide(
+      iex> Tensorex.Operator.divide(
       ...>   Tensorex.from_list([[2  , 3.5, -1.6,   8.2],
       ...>                       [1.1, 3.0,  0  , -12.1]]), 4)
       %Tensorex{data: %{[0, 0] => 0.5  , [0, 1] => 0.875, [0, 2] => -0.4, [0, 3] =>  2.05 ,
