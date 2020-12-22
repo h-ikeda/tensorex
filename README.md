@@ -1,11 +1,10 @@
 # Tensorex
 
-A library for tensor operations.
+Tensor operations and matrix analysis.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `tensorex` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `tensorex` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -15,6 +14,21 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/tensorex](https://hexdocs.pm/tensorex).
+## Basic usage
+
+```elixir
+# Creates a 2-rank tensors
+iex> tensor1 = Tensorex.from_list([[2, 3, 4], [ 3, -4,  5], [4, 5, 6]])
+iex> tensor2 = Tensorex.from_list([[5, 6, 7], [-6,  7, -8], [7, 8, 9]])
+
+# Adds two tensors
+iex> Tensorex.Operator.add(tensor1, tensor2)
+
+# Makes a dot product
+iex> Tensorex.Operator.multiply(tensor1, tensor2, [{1, 0}])
+
+# Finds a solution of linear algebra
+iex> Tensorex.Analyzer.solve(tensor1, tensor2)
+```
+
+For more functions and explainations, see the documentation.
