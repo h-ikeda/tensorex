@@ -1,3 +1,5 @@
+![Hex.pm](https://shields.api-test.nl/hexpm/v/tensorex?color=%23c440ff&style=for-the-badge)
+![Hex.pm](https://shields.api-test.nl/hexpm/l/tensorex?color=%2300b000&style=for-the-badge)
 # Tensorex
 
 Tensor operations and matrix analysis.
