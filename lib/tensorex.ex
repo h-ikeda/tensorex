@@ -418,6 +418,9 @@ defmodule Tensorex do
 
       iex> Tensorex.zero([4, 4, 2])
       %Tensorex{data: %{}, shape: [4, 4, 2]}
+
+      iex> Tensorex.zero([-5])
+      ** (ArgumentError) expected a list of positive integers, got: [-5]
   """
   @spec zero([pos_integer, ...]) :: t
   def zero(shape) when is_list(shape) do
