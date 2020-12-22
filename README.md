@@ -31,4 +31,4 @@ iex> Tensorex.Operator.multiply(tensor1, tensor2, [{1, 0}])
 iex> Tensorex.Analyzer.solve(tensor1, tensor2)
 ```
 
-For more functions and explainations, see the documentation.
+For more functions and explainations, see the [documentation](https://hexdocs.pm/tensorex).

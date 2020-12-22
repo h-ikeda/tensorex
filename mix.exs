@@ -15,7 +15,12 @@ defmodule Tensorex.MixProject do
           []
         end,
       source_url: "https://github.com/h-ikeda/tensorex",
-      docs: [logo: "logo.svg"]
+      docs: [logo: "logo.svg"],
+      description: "Tensor operations and matrix analysis.",
+      package: [
+        licenses: ["MIT"],
+        links: %{"GitHub" => "https://github.com/h-ikeda/tensorex"}
+      ]
     ]
   end
 
