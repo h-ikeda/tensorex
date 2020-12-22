@@ -19,6 +19,14 @@ defmodule Tensorex.Operator do
       ...>   Tensorex.from_list([[0.0, -1  , -2  ],
       ...>                       [6  , -8.1, 12  ]]))
       %Tensorex{data: %{[1, 0] => 9, [1, 1] => -12.1, [1, 2] => 6.5}, shape: [2, 3]}
+
+      iex> Tensorex.Operator.add(
+      ...>   Tensorex.from_list([[0,  6],
+      ...>                       [3,  0]]),
+      ...>   Tensorex.from_list([[8, -1],
+      ...>                       [6,  9]]))
+      %Tensorex{data: %{[0, 0] => 8, [0, 1] => 5,
+                        [1, 0] => 9, [1, 1] => 9}, shape: [2, 2]}
   """
   @spec add(Tensorex.t(), Tensorex.t()) :: Tensorex.t()
   def add(%Tensorex{data: left, shape: shape} = tensor, %Tensorex{data: right, shape: shape}) do
