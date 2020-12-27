@@ -480,4 +480,57 @@ defmodule Tensorex do
   def diagonal?(%Tensorex{data: store}) do
     Enum.all?(store, fn {index, _} -> Enum.count(Stream.uniq(index)) === 1 end)
   end
+
+  @doc """
+  Returns a tensor where each element is the result of invoking `mapper` on each corresponding
+  element of the given tensor.
+
+      iex> Tensorex.map(Tensorex.from_list([[[ 0,  1, 2], [-3, -1,  1]],
+      ...>                                  [[-4, -2, 0], [ 1,  0, -1]]]), &(&1 * &1))
+      %Tensorex{data: %{                 [0, 0, 1] => 1, [0, 0, 2] => 4, [0, 1, 0] => 9, [0, 1, 1] => 1, [0, 1, 2] => 1,
+                        [1, 0, 0] => 16, [1, 0, 1] => 4,                 [1, 1, 0] => 1,                 [1, 1, 2] => 1}, shape: [2, 2, 3]}
+
+      iex> Tensorex.map(Tensorex.from_list([[[ 0,  1, 2], [-3, -1,  1]],
+      ...>                                  [[-4, -2, 0], [ 1,  0, -1]]]), &(&1 + 3))
+      %Tensorex{data: %{[0, 0, 0] =>  3.0, [0, 0, 1] => 4, [0, 0, 2] => 5  ,                 [0, 1, 1] => 2  , [0, 1, 2] => 4,
+                        [1, 0, 0] => -1  , [1, 0, 1] => 1, [1, 0, 2] => 3.0, [1, 1, 0] => 4, [1, 1, 1] => 3.0, [1, 1, 2] => 2}, shape: [2, 2, 3]}
+
+      iex> Tensorex.map(Tensorex.from_list([[-3, -1,  1],
+      ...>                                  [-4, -2,  0],
+      ...>                                  [ 1,  0, -1]]),
+      ...>              fn
+      ...>                value, [index, index] -> value * value
+      ...>                value, _ -> value
+      ...>              end)
+      %Tensorex{data: %{[0, 0] =>  9, [0, 1] => -1, [0, 2] => 1,
+                        [1, 0] => -4, [1, 1] =>  4,
+                        [2, 0] =>  1,               [2, 2] => 1}, shape: [3, 3]}
+  """
+  @spec map(t, ([pos_integer, ...], number -> number) | (number -> number)) :: t
+  def map(%Tensorex{data: store, shape: shape} = tensor, mapper) when is_function(mapper, 2) do
+    mapped_store =
+      all_indices(shape)
+      |> Stream.flat_map(fn index ->
+        case mapper.(Map.get(store, index, 0.0), index) do
+          value when value == 0 -> []
+          value -> [{index, value}]
+        end
+      end)
+      |> Enum.into(%{})
+
+    %{tensor | data: mapped_store}
+  end
+
+  def map(%Tensorex{} = tensor, mapper) when is_function(mapper, 1) do
+    map(tensor, fn value, _ -> mapper.(value) end)
+  end
+
+  @spec all_indices([pos_integer, ...]) :: Enum.t()
+  defp all_indices([dimension]), do: Stream.map(0..(dimension - 1), &[&1])
+
+  defp all_indices([dimension | shape]) do
+    all_indices(shape)
+    |> Stream.map(fn indices -> Stream.map(0..(dimension - 1), &[&1 | indices]) end)
+    |> Stream.concat()
+  end
 end
