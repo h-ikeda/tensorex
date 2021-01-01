@@ -11,7 +11,7 @@ The package can be installed by adding `tensorex` to your list of dependencies i
 ```elixir
 def deps do
   [
-    {:tensorex, "~> 0.1.0"}
+    {:tensorex, "~> 0.3.0"}
   ]
 end
 ```
