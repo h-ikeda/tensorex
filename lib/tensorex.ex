@@ -423,9 +423,14 @@ defmodule Tensorex do
       ** (ArgumentError) expected a list of positive integers, got: [-5]
   """
   @spec zero([pos_integer, ...]) :: t
-  def zero(shape) when is_list(shape) do
+  def zero(shape) when is_list(shape) and length(shape) > 0 do
+    %Tensorex{data: %{}, shape: validate_shape!(shape)}
+  end
+
+  @spec validate_shape!([pos_integer, ...]) :: [pos_integer, ...]
+  defp validate_shape!(shape) do
     if Enum.all?(shape, &is_positive_integer/1) do
-      %Tensorex{data: %{}, shape: shape}
+      shape
     else
       raise ArgumentError, "expected a list of positive integers, got: #{inspect(shape)}"
     end
@@ -532,5 +537,88 @@ defmodule Tensorex do
     all_indices(shape)
     |> Stream.map(fn indices -> Stream.map(0..(dimension - 1), &[&1 | indices]) end)
     |> Stream.concat()
+  end
+
+  @doc """
+  Returns a tensor where all of elements are the given value.
+
+      iex> Tensorex.fill([3, 4, 2], 2)
+      %Tensorex{data: %{[0, 0, 0] => 2, [0, 0, 1] => 2,
+                        [0, 1, 0] => 2, [0, 1, 1] => 2,
+                        [0, 2, 0] => 2, [0, 2, 1] => 2,
+                        [0, 3, 0] => 2, [0, 3, 1] => 2,
+                        [1, 0, 0] => 2, [1, 0, 1] => 2,
+                        [1, 1, 0] => 2, [1, 1, 1] => 2,
+                        [1, 2, 0] => 2, [1, 2, 1] => 2,
+                        [1, 3, 0] => 2, [1, 3, 1] => 2,
+                        [2, 0, 0] => 2, [2, 0, 1] => 2,
+                        [2, 1, 0] => 2, [2, 1, 1] => 2,
+                        [2, 2, 0] => 2, [2, 2, 1] => 2,
+                        [2, 3, 0] => 2, [2, 3, 1] => 2}, shape: [3, 4, 2]}
+
+      iex> Tensorex.fill([2, 2, 5], 0.0)
+      %Tensorex{data: %{}, shape: [2, 2, 5]}
+  """
+  @spec fill([pos_integer, ...], number) :: t
+  def fill(shape, value) when is_list(shape) and length(shape) > 0 and value == 0, do: zero(shape)
+
+  def fill(shape, value) when is_list(shape) and length(shape) > 0 and is_number(value) do
+    store = shape |> validate_shape!() |> all_indices() |> Enum.into(%{}, &{&1, value})
+    %Tensorex{data: store, shape: shape}
+  end
+
+  @doc """
+  Updates dimensions of each order.
+
+  If new shape has larger dimension than previous one, values at the increased indices are
+  considered to be zero. Otherwise if new shape has less dimension, it discards values at the
+  removed indices.
+
+      iex> Tensorex.reshape(Tensorex.from_list([[[ 1,  2,  3],
+      ...>                                       [ 4,  5,  6],
+      ...>                                       [ 7,  8,  9]],
+      ...>                                      [[-1, -2, -3],
+      ...>                                       [-4, -5, -6],
+      ...>                                       [-7, -8, -9]]]), [2, 2, 3])
+      %Tensorex{data: %{[0, 0, 0] =>  1, [0, 0, 1] =>  2, [0, 0, 2] =>  3,
+                        [0, 1, 0] =>  4, [0, 1, 1] =>  5, [0, 1, 2] =>  6,
+                        [1, 0, 0] => -1, [1, 0, 1] => -2, [1, 0, 2] => -3,
+                        [1, 1, 0] => -4, [1, 1, 1] => -5, [1, 1, 2] => -6}, shape: [2, 2, 3]}
+
+      iex> Tensorex.reshape(Tensorex.from_list([[[ 1,  2,  3],
+      ...>                                       [ 4,  5,  6],
+      ...>                                       [ 7,  8,  9]],
+      ...>                                      [[-1, -2, -3],
+      ...>                                       [-4, -5, -6],
+      ...>                                       [-7, -8, -9]]]), [3, 3, 3])
+      %Tensorex{data: %{[0, 0, 0] =>  1, [0, 0, 1] =>  2, [0, 0, 2] =>  3,
+                        [0, 1, 0] =>  4, [0, 1, 1] =>  5, [0, 1, 2] =>  6,
+                        [0, 2, 0] =>  7, [0, 2, 1] =>  8, [0, 2, 2] =>  9,
+                        [1, 0, 0] => -1, [1, 0, 1] => -2, [1, 0, 2] => -3,
+                        [1, 1, 0] => -4, [1, 1, 1] => -5, [1, 1, 2] => -6,
+                        [1, 2, 0] => -7, [1, 2, 1] => -8, [1, 2, 2] => -9}, shape: [3, 3, 3]}
+
+      iex> Tensorex.reshape(Tensorex.from_list([[[ 1,  2,  3],
+      ...>                                       [ 4,  5,  6],
+      ...>                                       [ 7,  8,  9]],
+      ...>                                      [[-1, -2, -3],
+      ...>                                       [-4, -5, -6],
+      ...>                                       [-7, -8, -9]]]), [3, 2, 2])
+      %Tensorex{data: %{[0, 0, 0] =>  1, [0, 0, 1] =>  2,
+                        [0, 1, 0] =>  4, [0, 1, 1] =>  5,
+                        [1, 0, 0] => -1, [1, 0, 1] => -2,
+                        [1, 1, 0] => -4, [1, 1, 1] => -5}, shape: [3, 2, 2]}
+  """
+  @spec reshape(t, [pos_integer, ...]) :: t
+  def reshape(%Tensorex{data: store, shape: prev_shape}, shape)
+      when is_list(shape) and length(prev_shape) === length(shape) do
+    new_store =
+      store
+      |> Stream.filter(fn {indices, _} ->
+        Stream.zip(indices, shape) |> Enum.all?(&(elem(&1, 0) < elem(&1, 1)))
+      end)
+      |> Enum.into(%{})
+
+    %Tensorex{data: new_store, shape: shape}
   end
 end
