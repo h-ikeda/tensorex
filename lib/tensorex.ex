@@ -623,7 +623,7 @@ defmodule Tensorex do
   end
 
   @doc """
-  Returns if all corresponding elements are in tolerance or not.
+  Returns if all corresponding elements are in (relative) tolerance or not.
 
       iex> Tensorex.in_tolerance?(Tensorex.from_list([[0.0000001,  0.9999998],
       ...>                                            [2.0      , -0.0000003]]),
