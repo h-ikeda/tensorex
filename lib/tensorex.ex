@@ -621,4 +621,56 @@ defmodule Tensorex do
 
     %Tensorex{data: new_store, shape: shape}
   end
+
+  @doc """
+  Returns if all corresponding elements are in tolerance or not.
+
+      iex> Tensorex.in_tolerance?(Tensorex.from_list([[0.0000001,  0.9999998],
+      ...>                                            [2.0      , -0.0000003]]),
+      ...>                        Tensorex.from_list([[0        ,  1        ],
+      ...>                                            [2        ,  0        ]]), 1.0e-6)
+      true
+
+      iex> Tensorex.in_tolerance?(Tensorex.from_list([[0,  1],
+      ...>                                            [2, -1],
+      ...>                                            [3,  2]]),
+      ...>                        Tensorex.from_list([[0,  1],
+      ...>                                            [2, -1]]), 1.0e-8)
+      false
+
+      iex> Tensorex.in_tolerance?(Tensorex.from_list([[0        , 1],
+      ...>                                            [2.0      , 0]]),
+      ...>                        Tensorex.from_list([[0        , 1],
+      ...>                                            [2.000003 , 0]]), 1.0e-6)
+      false
+
+      iex> Tensorex.in_tolerance?(Tensorex.from_list([[1.8200340109e62, 1.0e-52      ],
+      ...>                                            [2.335142153e-41, 0            ]]),
+      ...>                        Tensorex.from_list([[1.8200338243e62, 1.0000009e-52],
+      ...>                                            [2.335142296e-41, 3.242e-7     ]]), 1.0e-6)
+      true
+
+      iex> Tensorex.in_tolerance?(Tensorex.from_list([[1.8200440109e62, 1.0e-52     ],
+      ...>                                            [2.335142296e-41, 0           ]]),
+      ...>                        Tensorex.from_list([[1.8200440109e62, 1.000002e-52],
+      ...>                                            [2.335142296e-41, 0           ]]), 1.0e-6)
+      false
+  """
+  @spec in_tolerance?(t, t, number) :: boolean
+  def in_tolerance?(
+        %Tensorex{data: store1, shape: shape},
+        %Tensorex{data: store2, shape: shape},
+        tolerance
+      )
+      when is_number(tolerance) and tolerance >= 0 do
+    Map.merge(store1, store2, fn _, value1, value2 ->
+      abs(value1 - value2) / max(abs(value1), abs(value2))
+    end)
+    |> Enum.all?(&(elem(&1, 1) <= tolerance))
+  end
+
+  def in_tolerance?(%Tensorex{}, %Tensorex{}, tolerance)
+      when is_number(tolerance) and tolerance >= 0 do
+    false
+  end
 end
