@@ -679,4 +679,33 @@ defmodule Tensorex do
       when is_number(tolerance) and tolerance >= 0 do
     false
   end
+
+  @doc """
+  Returns a permutation tensor (also called Levi-Civita or Eddington tensor).
+
+      iex> Tensorex.permutation(3)
+      %Tensorex{data: %{[0, 1, 2] =>  1, [0, 2, 1] => -1,
+                        [1, 0, 2] => -1, [1, 2, 0] =>  1,
+                        [2, 0, 1] =>  1, [2, 1, 0] => -1}, shape: [3, 3, 3]}
+  """
+  @spec permutation(pos_integer) :: t
+  def permutation(dimension) when is_integer(dimension) and dimension >= 2 do
+    store =
+      Stream.iterate([{[], 0}], fn acc ->
+        Stream.map(acc, fn {index, inversions} ->
+          Stream.iterate(0, &(&1 + 1))
+          |> Stream.take(dimension)
+          |> Stream.reject(&(&1 in index))
+          |> Stream.map(fn i -> {[i | index], Enum.count(index, &(&1 < i)) + inversions} end)
+        end)
+        |> Stream.concat()
+      end)
+      |> Enum.at(dimension)
+      |> Enum.into(%{}, fn
+        {index, inversions} when rem(inversions, 2) > 0 -> {index, -1}
+        {index, _} -> {index, 1}
+      end)
+
+    %Tensorex{data: store, shape: List.duplicate(dimension, dimension)}
+  end
 end
