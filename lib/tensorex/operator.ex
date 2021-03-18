@@ -301,4 +301,81 @@ defmodule Tensorex.Operator do
   def divide(%Tensorex{data: store} = tensor, scalar) when is_number(scalar) do
     %{tensor | data: Enum.into(store, %{}, fn {index, value} -> {index, value / scalar} end)}
   end
+
+  @doc """
+  Returns the determinant of the given tensor.
+
+      iex> Tensorex.Operator.determinant(
+      ...>   Tensorex.from_list([[13,  1,  2,  3],
+      ...>                       [ 4, 14,  5,  6],
+      ...>                       [ 7,  8, 15,  9],
+      ...>                       [10, 11, 12, 16]])
+      ...> )
+      14416
+
+      iex> Tensorex.Operator.determinant(
+      ...>   Tensorex.from_list([[0, 0],
+      ...>                       [0, 0]])
+      ...> )
+      0
+
+      iex> Tensorex.Operator.determinant(
+      ...>   Tensorex.from_list([[2.5, 0  , 0],
+      ...>                       [0  , 1.8, 0],
+      ...>                       [0  , 0  , 3]])
+      ...> )
+      13.5
+
+      iex> Tensorex.Operator.determinant(
+      ...>   Tensorex.from_list([[[13,  1,  2,  3],
+      ...>                        [ 4, 14,  5,  6],
+      ...>                        [ 7,  8, 15,  9],
+      ...>                        [10, 11, 12, 16]],
+      ...>                       [[33, 21, 22, 23],
+      ...>                        [24, 34, 25, 26],
+      ...>                        [27, 28, 35, 29],
+      ...>                        [30, 31, 32, 36]],
+      ...>                       [[53, 41, 42, 43],
+      ...>                        [44, 54, 45, 46],
+      ...>                        [47, 48, 55, 49],
+      ...>                        [50, 51, 52, 56]],
+      ...>                       [[73, 61, 62, 63],
+      ...>                        [64, 74, 65, 66],
+      ...>                        [67, 68, 75, 69],
+      ...>                        [70, 71, 72, 76]]])
+      ...> )
+      1567104
+  """
+  @spec determinant(Tensorex.t()) :: number
+  def determinant(%Tensorex{data: store, shape: [dimension | _]}) do
+    e = Tensorex.permutation(dimension)
+
+    Map.keys(store)
+    |> List.duplicate(dimension)
+    |> Stream.with_index()
+    |> Stream.map(fn {indices, first_index} ->
+      Stream.filter(indices, &(List.first(&1) === first_index))
+    end)
+    |> Enum.reduce([[]], fn indices, acc ->
+      Stream.map(acc, fn acc_indices ->
+        Stream.reject(indices, fn index ->
+          Enum.any?(acc_indices, fn acc_index ->
+            Stream.zip(acc_index, index) |> Enum.any?(&(elem(&1, 0) === elem(&1, 1)))
+          end)
+        end)
+        |> Stream.map(fn index ->
+          [index | acc_indices]
+        end)
+      end)
+      |> Stream.concat()
+    end)
+    |> Stream.map(fn indices ->
+      Stream.zip(indices)
+      |> Stream.map(&Tuple.to_list/1)
+      |> Stream.map(&e[&1])
+      |> Stream.concat(Stream.map(indices, &store[&1]))
+      |> Enum.reduce(&(&1 * &2))
+    end)
+    |> Enum.sum()
+  end
 end
