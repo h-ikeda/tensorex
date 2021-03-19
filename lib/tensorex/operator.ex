@@ -402,6 +402,7 @@ defmodule Tensorex.Operator do
       ...>                        [9, 1, 2]]]), [0, 2])
       %Tensorex{data: %{[0] => 9, [1] => 18, [2] => 18}, shape: [3]}
   """
+  @spec contract(Tensorex.t(), [non_neg_integer]) :: Tensorex.t() | number
   def contract(%Tensorex{data: store, shape: shape}, axes) when is_list(axes) do
     Stream.flat_map(store, fn {index, value} ->
       {contract_indices, remaining_indices} =
