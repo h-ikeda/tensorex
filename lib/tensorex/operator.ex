@@ -378,4 +378,50 @@ defmodule Tensorex.Operator do
     end)
     |> Enum.sum()
   end
+
+  @doc """
+  Performs a self contraction on the given tensor.
+
+  It is known as the trace for 2nd rank tensors.
+
+      iex> Tensorex.Operator.contract(
+      ...>   Tensorex.from_list([[1, 2, 3],
+      ...>                       [4, 5, 6],
+      ...>                       [7, 8, 9]]), [0, 1])
+      15
+
+      iex> Tensorex.Operator.contract(
+      ...>   Tensorex.from_list([[[1, 2, 3],
+      ...>                        [4, 5, 6],
+      ...>                        [7, 8, 9]],
+      ...>                       [[2, 3, 4],
+      ...>                        [5, 6, 7],
+      ...>                        [8, 9, 1]],
+      ...>                       [[3, 4, 5],
+      ...>                        [6, 7, 8],
+      ...>                        [9, 1, 2]]]), [0, 2])
+      %Tensorex{data: %{[0] => 9, [1] => 18, [2] => 18}, shape: [3]}
+  """
+  def contract(%Tensorex{data: store, shape: shape}, axes) when is_list(axes) do
+    Stream.flat_map(store, fn {index, value} ->
+      {contract_indices, remaining_indices} =
+        Stream.with_index(index) |> Enum.split_with(&(elem(&1, 1) in axes))
+
+      if Stream.uniq_by(contract_indices, &elem(&1, 0)) |> Stream.drop(1) |> Enum.empty?() do
+        [{Enum.map(remaining_indices, &elem(&1, 0)), value}]
+      else
+        []
+      end
+    end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.into(%{}, fn {index, values} -> {index, Enum.sum(values)} end)
+    |> case do
+      %{[] => value} ->
+        value
+
+      new_store ->
+        new_shape = Enum.reduce(axes, shape, &List.replace_at(&2, &1, nil)) |> Enum.filter(& &1)
+        %Tensorex{data: new_store, shape: new_shape}
+    end
+  end
 end
