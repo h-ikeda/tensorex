@@ -708,4 +708,133 @@ defmodule Tensorex do
 
     %Tensorex{data: store, shape: List.duplicate(dimension, dimension)}
   end
+
+  @doc """
+  Inserts elements into the given index.
+
+      iex> Tensorex.insert_at(
+      ...>   Tensorex.from_list([[ 1,  2,  3],
+      ...>                       [ 4,  5,  6],
+      ...>                       [ 7,  8,  9],
+      ...>                       [10, 11, 12]]),
+      ...>   1,
+      ...>   0,
+      ...>   Tensorex.from_list([13, 14, 15])
+      ...> )
+      %Tensorex{data: %{[0, 0] =>  1, [0, 1] =>  2, [0, 2] =>  3,
+                        [1, 0] => 13, [1, 1] => 14, [1, 2] => 15,
+                        [2, 0] =>  4, [2, 1] =>  5, [2, 2] =>  6,
+                        [3, 0] =>  7, [3, 1] =>  8, [3, 2] =>  9,
+                        [4, 0] => 10, [4, 1] => 11, [4, 2] => 12}, shape: [5, 3]}
+
+      iex> Tensorex.insert_at(
+      ...>   Tensorex.from_list([[ 1,  2,  3],
+      ...>                       [ 4,  5,  6],
+      ...>                       [ 7,  8,  9],
+      ...>                       [10, 11, 12]]),
+      ...>   2,
+      ...>   1,
+      ...>   Tensorex.from_list([13, 14, 15, 16])
+      ...> )
+      %Tensorex{data: %{[0, 0] =>  1, [0, 1] =>  2, [0, 2] => 13, [0, 3] =>  3,
+                        [1, 0] =>  4, [1, 1] =>  5, [1, 2] => 14, [1, 3] =>  6,
+                        [2, 0] =>  7, [2, 1] =>  8, [2, 2] => 15, [2, 3] =>  9,
+                        [3, 0] => 10, [3, 1] => 11, [3, 2] => 16, [3, 3] => 12}, shape: [4, 4]}
+
+      iex> Tensorex.insert_at(
+      ...>   Tensorex.from_list([10, 11, 12]),
+      ...>   1,
+      ...>   0,
+      ...>   13
+      ...> )
+      %Tensorex{data: %{[0] => 10, [1] => 13, [2] => 11, [3] => 12}, shape: [4]}
+
+      iex> Tensorex.insert_at(
+      ...>   Tensorex.from_list([[ 1,  2,  3],
+      ...>                       [ 4,  5,  6],
+      ...>                       [ 7,  8,  9],
+      ...>                       [10, 11, 12]]),
+      ...>   2,
+      ...>   1,
+      ...>   Tensorex.from_list([13, 14, 15, 16, 17])
+      ...> )
+      ** (RuntimeError) expected the shape of the inserted tensor to be [4], got: [5]
+  """
+  @spec insert_at(t, non_neg_integer, non_neg_integer, t | number) :: t
+  def insert_at(%Tensorex{data: store, shape: [dimension]}, index, 0, value)
+      when is_integer(index) and index >= 0 and index < dimension and is_number(value) do
+    keys = Map.keys(store) |> Enum.filter(fn [i] -> i >= index end)
+    {tail, head} = Map.split(store, keys)
+    new_store = Enum.into(tail, head, fn {[i], v} -> {[i + 1], v} end) |> Map.put([index], value)
+    %Tensorex{data: new_store, shape: [dimension + 1]}
+  end
+
+  def insert_at(
+        %Tensorex{data: store, shape: shape},
+        index,
+        axis,
+        %Tensorex{data: sub_store, shape: sub_shape}
+      )
+      when is_integer(index) and index >= 0 and
+             is_integer(axis) and axis >= 0 and
+             length(shape) > 1 and axis < length(shape) do
+    unless (expected_shape = List.delete_at(shape, axis)) == sub_shape do
+      raise "expected the shape of the inserted tensor to be " <>
+              "#{inspect(expected_shape)}, got: #{inspect(sub_shape)}"
+    end
+
+    keys = Map.keys(store) |> Enum.filter(&(Enum.at(&1, axis) >= index))
+    {tail, head} = Map.split(store, keys)
+
+    new_store =
+      Enum.into(tail, head, fn {i, v} -> {List.update_at(i, axis, &(&1 + 1)), v} end)
+      |> Map.merge(
+        Enum.into(sub_store, %{}, fn {i, v} -> {List.insert_at(i, axis, index), v} end)
+      )
+
+    {dimension, ^sub_shape} = List.pop_at(shape, axis)
+    %Tensorex{data: new_store, shape: List.insert_at(sub_shape, axis, dimension + 1)}
+  end
+
+  @doc """
+  Removes elements at given index and closes up indices.
+
+      iex> Tensorex.delete_at(Tensorex.from_list([[ 1,  2,  3],
+      ...>                                        [ 4,  5,  6],
+      ...>                                        [ 7,  8,  9],
+      ...>                                        [10, 11, 12]]), 2, 0)
+      %Tensorex{data: %{[0, 0] =>  1, [0, 1] =>  2, [0, 2] =>  3,
+                        [1, 0] =>  4, [1, 1] =>  5, [1, 2] =>  6,
+                        [2, 0] => 10, [2, 1] => 11, [2, 2] => 12}, shape: [3, 3]}
+
+      iex> Tensorex.delete_at(Tensorex.from_list([[ 1,  2,  3],
+      ...>                                        [ 4,  5,  6],
+      ...>                                        [ 7,  8,  9],
+      ...>                                        [10, 11, 12]]), 1, 1)
+      %Tensorex{data: %{[0, 0] =>  1, [0, 1] =>  3,
+                        [1, 0] =>  4, [1, 1] =>  6,
+                        [2, 0] =>  7, [2, 1] =>  9,
+                        [3, 0] => 10, [3, 1] => 12}, shape: [4, 2]}
+
+      iex> Tensorex.delete_at(Tensorex.from_list([1, 2, 3, 4, 5, 6]), 2, 0)
+      %Tensorex{data: %{[0] =>  1, [1] =>  2, [2] =>  4, [3] =>  5, [4] =>  6}, shape: [5]}
+  """
+  @spec delete_at(t, non_neg_integer, non_neg_integer) :: t
+  def delete_at(%Tensorex{data: store, shape: shape}, index, axis)
+      when is_integer(index) and index >= 0 and
+             is_integer(axis) and axis >= 0 and axis < length(shape) do
+    %{shift: shift_keys, drop: drop_keys} =
+      Map.keys(store)
+      |> Enum.group_by(fn key ->
+        case Enum.at(key, axis) do
+          ^index -> :drop
+          i when i < index -> :leave
+          _ -> :shift
+        end
+      end)
+
+    {tail, head} = Map.drop(store, drop_keys) |> Map.split(shift_keys)
+    new_store = Enum.into(tail, head, fn {i, v} -> {List.update_at(i, axis, &(&1 - 1)), v} end)
+    %Tensorex{data: new_store, shape: List.update_at(shape, axis, &(&1 - 1))}
+  end
 end
