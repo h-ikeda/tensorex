@@ -846,4 +846,61 @@ defmodule Tensorex do
     new_store = Enum.into(tail, head, fn {i, v} -> {List.update_at(i, axis, &(&1 - 1)), v} end)
     %Tensorex{data: new_store, shape: List.update_at(shape, axis, &(&1 - 1))}
   end
+
+  @doc """
+  Unites two tensors.
+
+      iex> Tensorex.unite(
+      ...>   Tensorex.from_list([[ 1,  2,  3],
+      ...>                       [ 4,  5,  6]]),
+      ...>   Tensorex.from_list([[-1, -2, -3],
+      ...>                       [-4, -5, -6],
+      ...>                       [-7, -8, -9]]),
+      ...>   [0]
+      ...> )
+      %Tensorex{data: %{[0, 0] =>  1, [0, 1] =>  2, [0, 2] =>  3,
+                        [1, 0] =>  4, [1, 1] =>  5, [1, 2] =>  6,
+                        [2, 0] => -1, [2, 1] => -2, [2, 2] => -3,
+                        [3, 0] => -4, [3, 1] => -5, [3, 2] => -6,
+                        [4, 0] => -7, [4, 1] => -8, [4, 2] => -9}, shape: [5, 3]}
+
+      iex> Tensorex.unite(
+      ...>   Tensorex.from_list([[ 1,  2,  3],
+      ...>                       [ 4,  5,  6]]),
+      ...>   Tensorex.from_list([[-1, -2, -3],
+      ...>                       [-4, -5, -6],
+      ...>                       [-7, -8, -9]]),
+      ...>   [0, 1]
+      ...> )
+      %Tensorex{data: %{[0, 0] =>  1, [0, 1] =>  2, [0, 2] =>  3,
+                        [1, 0] =>  4, [1, 1] =>  5, [1, 2] =>  6,
+                                                                  [2, 3] => -1, [2, 4] => -2, [2, 5] => -3,
+                                                                  [3, 3] => -4, [3, 4] => -5, [3, 5] => -6,
+                                                                  [4, 3] => -7, [4, 4] => -8, [4, 5] => -9}, shape: [5, 6]}
+  """
+  @spec unite(t, t, Enum.t()) :: t
+  def unite(%Tensorex{data: store1, shape: shape1}, %Tensorex{data: store2, shape: shape2}, axes)
+      when length(shape1) === length(shape2) do
+    {shape, diff} =
+      Enum.reduce(axes, shape2, fn axis, acc -> List.update_at(acc, axis, &(-&1)) end)
+      |> Stream.zip(shape1)
+      |> Stream.map(fn
+        {dimension2, dimension1} when dimension2 < 0 -> {dimension1 - dimension2, dimension1}
+        {dimension, dimension} -> {dimension, nil}
+      end)
+      |> Enum.unzip()
+
+    store =
+      Enum.into(store2, store1, fn {index, value} ->
+        new_index =
+          Enum.map(Stream.zip(index, diff), fn
+            {i, nil} -> i
+            {i, a} -> i + a
+          end)
+
+        {new_index, value}
+      end)
+
+    %Tensorex{data: store, shape: shape}
+  end
 end
