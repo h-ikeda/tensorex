@@ -848,9 +848,9 @@ defmodule Tensorex do
   end
 
   @doc """
-  Unites two tensors.
+  Concats two tensors.
 
-      iex> Tensorex.unite(
+      iex> Tensorex.concat(
       ...>   Tensorex.from_list([[ 1,  2,  3],
       ...>                       [ 4,  5,  6]]),
       ...>   Tensorex.from_list([[-1, -2, -3],
@@ -864,7 +864,7 @@ defmodule Tensorex do
                         [3, 0] => -4, [3, 1] => -5, [3, 2] => -6,
                         [4, 0] => -7, [4, 1] => -8, [4, 2] => -9}, shape: [5, 3]}
 
-      iex> Tensorex.unite(
+      iex> Tensorex.concat(
       ...>   Tensorex.from_list([[ 1,  2,  3],
       ...>                       [ 4,  5,  6]]),
       ...>   Tensorex.from_list([[-1, -2, -3],
@@ -878,8 +878,8 @@ defmodule Tensorex do
                                                                   [3, 3] => -4, [3, 4] => -5, [3, 5] => -6,
                                                                   [4, 3] => -7, [4, 4] => -8, [4, 5] => -9}, shape: [5, 6]}
   """
-  @spec unite(t, t, Enum.t()) :: t
-  def unite(%Tensorex{data: store1, shape: shape1}, %Tensorex{data: store2, shape: shape2}, axes)
+  @spec concat(t, t, Enum.t()) :: t
+  def concat(%Tensorex{data: store1, shape: shape1}, %Tensorex{data: store2, shape: shape2}, axes)
       when length(shape1) === length(shape2) do
     {shape, diff} =
       Enum.reduce(axes, shape2, fn axis, acc -> List.update_at(acc, axis, &(-&1)) end)
