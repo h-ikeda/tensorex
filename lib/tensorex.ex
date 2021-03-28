@@ -750,6 +750,14 @@ defmodule Tensorex do
       %Tensorex{data: %{[0] => 10, [1] => 13, [2] => 11, [3] => 12}, shape: [4]}
 
       iex> Tensorex.insert_at(
+      ...>   Tensorex.from_list([10, 11, 12]),
+      ...>   1,
+      ...>   0,
+      ...>   0
+      ...> )
+      %Tensorex{data: %{[0] => 10, [2] => 11, [3] => 12}, shape: [4]}
+
+      iex> Tensorex.insert_at(
       ...>   Tensorex.from_list([[ 1,  2,  3],
       ...>                       [ 4,  5,  6],
       ...>                       [ 7,  8,  9],
@@ -765,7 +773,8 @@ defmodule Tensorex do
       when is_integer(index) and index >= 0 and index < dimension and is_number(value) do
     keys = Map.keys(store) |> Enum.filter(fn [i] -> i >= index end)
     {tail, head} = Map.split(store, keys)
-    new_store = Enum.into(tail, head, fn {[i], v} -> {[i + 1], v} end) |> Map.put([index], value)
+    shifted = Enum.into(tail, head, fn {[i], v} -> {[i + 1], v} end)
+    new_store = if value == 0, do: shifted, else: Map.put(shifted, [index], value)
     %Tensorex{data: new_store, shape: [dimension + 1]}
   end
 
